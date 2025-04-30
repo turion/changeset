@@ -4,31 +4,30 @@ module Control.Monad.Changeset.Reflex where
 import Data.Bifunctor (Bifunctor (second))
 import Data.Functor ((<&>))
 import Data.Functor.Compose
+import Data.List.NonEmpty (NonEmpty, fromList)
 import Data.Functor.Identity (Identity (Identity))
+import Data.Tuple (swap)
+import Data.Function ((&))
 
 -- monoid-extras
 import Data.Monoid.Action
+
+-- containers
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IM
+import Data.Map (Map)
 
 -- reflex
 import Reflex.Class
 
 -- dependent-map
-import Data.Dependent.Map (
-  DMap,
-  delete,
-  insert,
-  traverseWithKey,
- )
+import Data.Dependent.Map (  DMap,  delete,  insert,  traverseWithKey, )
+import Data.GADT.Compare (GCompare)
+import Data.Functor.Misc (dmapToIntMap, dmapToMap, intMapWithFunctorToDMap, mapWithFunctorToDMap)
 
 -- changeset
-import Control.Monad.Trans.Changeset (ChangesetT (..))
-import Data.Function ((&))
-import Data.Functor.Misc (dmapToIntMap, dmapToMap, intMapWithFunctorToDMap, mapWithFunctorToDMap)
-import Data.GADT.Compare (GCompare)
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IM
-import Data.List.NonEmpty (NonEmpty, fromList)
-import Data.Map (Map)
+import Control.Monad.Trans.Changeset (ChangesetT (..), runChangesetT)
+import Data.Monoid.RightAction (RightAction)
 
 -- | A change to a dependent map 'DMap'.
 data DMapChange k f v
@@ -50,6 +49,22 @@ mergeChangesetEvent dmap = ChangesetT $ \s -> traverseWithKey (const (second Ide
 
 -- | A functor that creates changes, and performs side effects in @m@ to create an 'Event'.
 type ChangesetEventT t s w m = ChangesetT s w (Compose m (Event t))
+
+changesetEventT :: (s -> m (Event t (w, a))) -> ChangesetEventT t s w m a
+changesetEventT = ChangesetT . fmap Compose
+
+changesetEventT_ :: (Functor m, Reflex t) => (s -> m (Event t w)) -> ChangesetEventT t s w m ()
+changesetEventT_ = changesetEventT . fmap (fmap (fmap (, ())))
+
+getChangesetEventT :: ChangesetEventT t s w m a -> s -> m (Event t (w, a))
+getChangesetEventT = fmap getCompose . getChangesetT
+
+getChangeEventT :: (Functor m, Reflex t) => ChangesetEventT t s w m a -> s -> m (Event t w)
+getChangeEventT = fmap (fmap (fmap fst)) . getChangesetEventT
+
+runChangesetEventT :: (RightAction w s, Reflex t, Functor m) => ChangesetEventT t s w m a -> s -> m (Event t (s, a))
+runChangesetEventT = fmap (fmap (fmap swap) . getCompose) . runChangesetT
+
 
 -- | Like 'mergeChangesetEvent', but generalised to include @m@ effects.
 mergeChangesetEventT :: (Reflex t, GCompare k, Monoid w, Applicative m) => DMap k (ChangesetEventT t s w m) -> ChangesetEventT t s w m (DMap k Identity)
