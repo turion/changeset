@@ -85,7 +85,7 @@ library
 
   hs-source-dirs: src
 
-  if impl(ghc >= 9.6)
+  if impl(ghc >=9.6)
     build-depends:
       mtl ^>=2.3.1
 
@@ -110,7 +110,7 @@ test-suite changeset-test
     base,
     changeset,
     monoid-extras,
-    tasty ^>=1.4.2,
+    tasty >=1.4.2 && <1.6,
     tasty-hunit ^>=0.10.2,
     transformers,
 
@@ -120,7 +120,7 @@ test-suite changeset-examples
   type: exitcode-stdio-1.0
   hs-source-dirs: examples
 
-  if impl(ghc >= 9.6)
+  if impl(ghc >=9.6)
     hs-source-dirs: examples-mtl23
   else
     hs-source-dirs: examples-mtl22
@@ -131,7 +131,7 @@ test-suite changeset-examples
     changeset,
     monoid-extras,
     mtl,
-    tasty ^>=1.4.2,
+    tasty >=1.4.2 && <1.6,
     tasty-hunit ^>=0.10.2,
     transformers,
     witherable,

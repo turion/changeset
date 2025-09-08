@@ -81,7 +81,7 @@ test-suite changeset-containers-test
     changeset-containers,
     containers,
     monoid-extras,
-    tasty ^>=1.4.2,
+    tasty >=1.4.2 && <1.6,
     tasty-hunit ^>=0.10.2,
 
   other-modules:
