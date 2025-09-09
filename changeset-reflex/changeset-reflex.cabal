@@ -1,9 +1,6 @@
 cabal-version: 2.4
 name: changeset-reflex
--- PVP summary:     +-+------- breaking API changes
---                  | | +----- non-breaking API additions
---                  | | | +--- code changes with no API change
-version: 0.1.0.2
+version: 0.1.0.3
 synopsis: Stateful monad transformer based on monoidal actions
 description:
   A general state monad transformer with separate types for the state and the possible changes.
@@ -57,7 +54,7 @@ library
 
   build-depends:
     base >=4.12 && <4.22,
-    changeset ==0.1.0.2,
+    changeset ==0.1.0.3,
     containers >=0.6 && <0.8,
     dependent-map ^>=0.4,
     monoid-extras ^>=0.6,
