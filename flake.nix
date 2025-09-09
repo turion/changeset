@@ -44,38 +44,38 @@
         # "ghc912" # Uncomment as soon as nixpkgs is more advanced
       ];
 
-      haskellPackagesFor = pkgs: genAttrs supportedGhcs (ghc: pkgs.haskell.packages.${ghc})
-        // { default = pkgs.haskellPackages; };
-
-      hoverlay = pkgs: hfinal: hprev: with pkgs.haskell.lib;
-        (mapAttrs (pname: path: hfinal.callCabal2nix pname path { }) localPackages);
-
-      haskellPackagesExtended = pkgs: mapAttrs
-        (ghcVersion: haskellPackages: haskellPackages.override (_: {
-          overrides = (hoverlay pkgs);
-        }))
-        (haskellPackagesFor pkgs);
-
-      localPackagesFor = haskellPackages: mapAttrs (pname: _path: haskellPackages.${pname}) localPackages;
-      allLocalPackagesFor = pkgs: ghcVersion: haskellPackages:
-        pkgs.linkFarm "${projectName}-all-for-${ghcVersion}"
-          (localPackagesFor haskellPackages);
     in
     flake-utils.lib.eachDefaultSystem
       (system:
 
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          forEachGHC = mapAttrs (allLocalPackagesFor pkgs) (haskellPackagesExtended pkgs);
+          haskellPackagesFor = genAttrs supportedGhcs (ghc: pkgs.haskell.packages.${ghc})
+          // { default = pkgs.haskellPackages; };
+
+          hoverlay = hfinal: hprev: with pkgs.haskell.lib;
+            (mapAttrs (pname: path: hfinal.callCabal2nix pname path { }) localPackages);
+
+          haskellPackagesExtended = mapAttrs
+            (ghcVersion: haskellPackages: haskellPackages.override (_: {
+              overrides = hoverlay;
+            }))
+            haskellPackagesFor;
+
+          localPackagesFor = haskellPackages: mapAttrs (pname: _path: haskellPackages.${pname}) localPackages;
+          allLocalPackagesFor = ghcVersion: haskellPackages:
+            pkgs.linkFarm "${projectName}-all-for-${ghcVersion}"
+              (localPackagesFor haskellPackages);
+          forEachGHC = mapAttrs allLocalPackagesFor haskellPackagesExtended;
           allGHCs = pkgs.linkFarm "${projectName}-all-ghcs" forEachGHC;
         in
         {
           # "packages" doesn't allow nested sets
           legacyPackages = mapAttrs
             (ghcVersion: haskellPackages: localPackagesFor haskellPackages // {
-              "${projectName}-all" = allLocalPackagesFor pkgs ghcVersion haskellPackages;
+              "${projectName}-all" = allLocalPackagesFor ghcVersion haskellPackages;
             })
-            (haskellPackagesExtended pkgs) // {
+            haskellPackagesExtended // {
             "${projectName}-all" = forEachGHC;
           };
 
@@ -85,20 +85,19 @@
 
           devShells = mapAttrs
             (ghcVersion: haskellPackages: haskellPackages.shellFor {
-              packages = hps: attrValues (localPackagesFor haskellPackages);
+              packages = hps: attrValues (localPackagesFor (haskellPackagesExtended.${ghcVersion}));
               nativeBuildInputs = (
-                lib.optional (versionAtLeast haskellPackages.ghc.version "9.2")
+                lib.optional (versionAtLeast haskellPackages.ghc.version "9.4")
                   haskellPackages.haskell-language-server)
               ++ (with pkgs;
                 [ cabal-install ]
               )
               ;
             })
-            (haskellPackagesExtended pkgs);
+            haskellPackagesFor;
 
           formatter = pkgs.nixpkgs-fmt;
         }) // {
       inherit supportedGhcs;
-      inherit hoverlay;
     };
 }
