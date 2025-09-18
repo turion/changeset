@@ -59,6 +59,7 @@ import Control.Monad (MonadPlus)
 import Data.Bifoldable (Bifoldable (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Bitraversable (Bitraversable (..))
+import Data.Coerce (coerce)
 import Data.Foldable (Foldable (..))
 import Data.Function ((&))
 import Data.Functor ((<&>))
@@ -374,7 +375,7 @@ changes = Changes . fromList
 When @'addChange' w cs@ acts on a state with 'actRight', @w@ will be applied last.
 -}
 addChange :: w -> Changes w -> Changes w
-addChange w = Changes . (|> w) . getChanges
+addChange w = coerce (|> w)
 
 -- | Create a 'Changes' from a single change.
 singleChange :: w -> Changes w
