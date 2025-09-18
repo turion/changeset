@@ -626,3 +626,12 @@ instance (Semialign f, Filterable f, RightAction w s) => RightAction (AlignChang
 
 instance (Semialign f, RightTorsor w s) => RightTorsor (AlignChanges f w s) (f s) where
   differenceRight = ((AlignChanges .) .) $ alignWith $ these (const DeleteAlignPosition) SetAlignPosition $ (ChangeAlignPosition .) . differenceRight
+
+-- ** Changing 'FunctorWithIndex'
+
+-- | Change a 'FunctorWithIndex' structure by applying the change to every element through 'imap'.
+newtype ImapChange i w = ImapChange {getImapChange :: i -> w}
+  deriving newtype (Semigroup, Monoid, Functor)
+
+instance (RightAction w s, FunctorWithIndex i f) => RightAction (ImapChange i w) (f s) where
+  actRight fs ImapChange {getImapChange} = imap (flip actRight . getImapChange) fs
