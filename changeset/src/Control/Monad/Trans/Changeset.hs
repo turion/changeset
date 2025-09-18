@@ -87,10 +87,10 @@ import Control.Monad.Writer.Class (MonadWriter (..))
 import Witherable (Filterable (..), FilterableWithIndex (..), Witherable (wither), (<&?>))
 
 -- these
-import Data.These (mergeThese, these)
+import Data.These (these)
 
 -- semialign
-import Data.Semialign (Align (..), Semialign (..))
+import Data.Semialign (Align (..), Semialign (..), salign)
 
 -- indexed-traversable
 import Data.Foldable.WithIndex (FoldableWithIndex (..))
@@ -606,7 +606,7 @@ deriving instance (Eq1 f, (forall a. (Eq a) => Eq (f a)), Eq w, Eq s) => Eq (Ali
 deriving instance (Eq (AlignChanges f w s), Ord1 f, (forall b. (Ord b) => Ord (f b)), Ord w, Ord s) => Ord (AlignChanges f w s)
 
 instance (Semialign f, Semigroup w, RightAction w s) => Semigroup (AlignChanges f w s) where
-  AlignChanges ac1 <> AlignChanges ac2 = AlignChanges $ alignWith (mergeThese (<>)) ac1 ac2
+  AlignChanges ac1 <> AlignChanges ac2 = AlignChanges $ salign ac1 ac2
 
 instance (Semigroup w, RightAction w s, Align f) => Monoid (AlignChanges f w s) where
   mempty = AlignChanges nil
