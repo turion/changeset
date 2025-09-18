@@ -61,6 +61,8 @@ import Data.Foldable (Foldable (..))
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Functor.Identity (Identity (runIdentity))
+import Data.Kind (Type)
+import Data.Monoid (Last (..))
 import Data.Tuple (swap)
 import Prelude hiding (Foldable ())
 
@@ -83,8 +85,6 @@ import Witherable (Filterable (mapMaybe), Witherable (wither))
 
 -- changeset
 import Control.Monad.Changeset.Class
-import Data.Kind (Type)
-import Data.Monoid (Last (..))
 import Data.Monoid.RightAction (RightAction, actRight)
 
 -- * The 'ChangesetT' monad transformer
