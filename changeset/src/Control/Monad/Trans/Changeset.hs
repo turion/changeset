@@ -357,8 +357,11 @@ To inspect or edit 'Changes', see the type classes 'Functor', 'Foldable', 'Trave
 -}
 newtype Changes w = Changes {getChanges :: Seq w}
   deriving (Show, Read, Eq, Ord)
-  deriving newtype (Semigroup, Monoid, Foldable, Functor)
+  deriving newtype (Semigroup, Monoid, Foldable, Functor, FunctorWithIndex Int, FoldableWithIndex Int)
   deriving (Traversable)
+
+instance TraversableWithIndex Int Changes where
+  itraverse f = fmap Changes . itraverse f . getChanges
 
 instance Filterable Changes where
   mapMaybe f = Changes . mapMaybe f . getChanges
