@@ -573,6 +573,8 @@ instance (Monoid w, RightAction w s) => Monoid (AlignPositionChange w s) where
 
 Containers implementing 'Filterable' and 'Semialign' are fundamentally those that can be diffed easily.
 Therefore, they have a general purpose 'RightTorsor' implementation.
+
+Note that for the more special 'Zip' class, a simpler instance without a custom change type already exists.
 -}
 newtype AlignChanges (f :: Type -> Type) w s = AlignChanges {getAlignChanges :: f (AlignPositionChange w s)}
   deriving (Functor, Foldable, Traversable)

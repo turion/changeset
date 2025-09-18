@@ -4,9 +4,13 @@ module Data.Monoid.RightAction where
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Dual (..), Endo (..), Last (..))
 import Data.Void (Void)
+import Prelude hiding (zipWith)
 
 -- monoid-extras
 import Data.Monoid.Action (Action (..), Regular (Regular))
+
+-- semialign
+import Data.Zip (Zip (..))
 
 -- * Right action
 
@@ -47,6 +51,9 @@ instance (Semigroup m) => RightAction m (Regular m) where
 instance (RightAction m s) => RightAction (Maybe m) s where
   actRight s = maybe s (actRight s)
 
+instance (Semigroup w, RightAction w s, Zip f) => RightAction (f w) (f s) where
+  actRight = zipWith actRight
+
 {- | Endomorphism type with reverse 'Monoid' instance.
 
 The standard 'Endo' type has a left action on @s@ since its composition is defined as @Endo f <> Endo g = Endo (f . g).@
@@ -80,7 +87,7 @@ s `differenceRight` s = mempty
 @
 
 In group theory, this concept is called a [torsor](https://en.wikipedia.org/wiki/Principal_homogeneous_space).
-See also https://hackage-content.haskell.org/package/monoid-extras/docs/Data-Monoid-Action.html#t:Torsor for the same concept,
+See also [monoid-extras' @Torsor@](https://hackage-content.haskell.org/package/monoid-extras/docs/Data-Monoid-Action.html#t:Torsor) for the same concept,
 but for left actions.
 -}
 class RightTorsor m s where
@@ -97,3 +104,7 @@ instance RightTorsor () s where
 -- | When the new state is equal to the original, produce the empty change, otherwise just 'set' to the new state.
 instance (Eq s) => RightTorsor (Last s) s where
   differenceRight sOrig sActed = Last $ if sOrig == sActed then Nothing else Just sActed
+
+-- | Calculate the diff per position of the container.
+instance (RightTorsor w s, Zip f) => RightTorsor (f w) (f s) where
+  differenceRight = zipWith differenceRight
