@@ -86,10 +86,10 @@ import Control.Monad.Writer.Class (MonadWriter (..))
 import Witherable (Filterable (..), FilterableWithIndex (..), Witherable (wither), (<&?>))
 
 -- these
-import Data.These (mergeThese, these)
+import Data.These (these)
 
 -- semialign
-import Data.Semialign (Align (..), Semialign (..))
+import Data.Semialign (Align (..), Semialign (..), salign)
 
 -- changeset
 import Control.Monad.Changeset.Class
@@ -550,6 +550,8 @@ instance (Monoid w, RightAction w s) => Monoid (AlignPositionChange w s) where
 
 Containers implementing 'Filterable' and 'Semialign' are fundamentally those that can be diffed easily.
 Therefore, they have a general purpose 'RightTorsor' implementation.
+
+Note that for the more special 'Zip' class, a simpler instance without a custom change type already exists.
 -}
 newtype AlignChange (f :: Type -> Type) w s = AlignChange {getAlignChange :: f (AlignPositionChange w s)}
   deriving (Functor, Foldable, Traversable)
@@ -564,7 +566,7 @@ instance (Traversable f) => Bitraversable (AlignChange f) where
   bitraverse f g = fmap AlignChange . traverse (bitraverse f g) . getAlignChange
 
 instance (Semialign f, Semigroup w, RightAction w s) => Semigroup (AlignChange f w s) where
-  AlignChange ac1 <> AlignChange ac2 = AlignChange $ alignWith (mergeThese (<>)) ac1 ac2
+  AlignChange ac1 <> AlignChange ac2 = AlignChange $ salign ac1 ac2
 
 instance (Semigroup w, RightAction w s, Align f) => Monoid (AlignChange f w s) where
   mempty = AlignChange nil
