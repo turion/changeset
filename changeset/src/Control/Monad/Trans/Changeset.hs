@@ -350,6 +350,8 @@ In that case, 'Changes' is handy.
 It serves as a container for changes that don't have a 'Monoid' or 'Semigroup' instance.
 All changes are applied sequentially.
 
+Mathematically, this is the free monoid over the type of single changes.
+
 To inspect or edit 'Changes', see the type classes 'Functor', 'Foldable', 'Traversable', 'Filterable' and 'Witherable'.
 -}
 newtype Changes w = Changes {getChanges :: Seq w}
