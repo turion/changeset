@@ -81,7 +81,10 @@ import Control.Monad.State.Class (MonadState (..))
 import Control.Monad.Writer.Class (MonadWriter (..))
 
 -- witherable
-import Witherable (Filterable (mapMaybe), Witherable (wither))
+import Witherable (Filterable (mapMaybe), FilterableWithIndex (..), Witherable (wither), (<&?>))
+
+-- indexed-traversable
+import Data.Functor.WithIndex (FunctorWithIndex (..))
 
 -- changeset
 import Control.Monad.Changeset.Class
@@ -438,3 +441,70 @@ type JustChange = FmapChange Maybe
 -- | Apply changes only to 'Just' values.
 justChange :: w -> JustChange w
 justChange = FmapChange
+
+-- ** Changing 'Filterable's
+
+{- | Change all positions in a 'Filterable' in the same way.
+
+For a 'Filterable' @f s@, the change type must have a 'RightAction' instance on @'Maybe' s@, not @s@,
+where 'Nothing' denotes deletion of the position.
+
+(If you don't want to delete positions, you are probably looking for 'FmapChange' or 'JustChange' instead.)
+-}
+newtype FilterableChange w = FilterableChange {getFilterableChange :: w}
+  deriving newtype (Show, Eq, Ord, Read)
+  deriving stock (Foldable, Functor, Traversable)
+
+instance (Filterable f, RightAction w (Maybe s)) => RightAction (FilterableChange w) (f s) where
+  actRight fs FilterableChange {getFilterableChange} = fs <&?> flip actRight getFilterableChange . Just
+
+{- | Change or delete a position in a 'Filterable'.
+
+This type in itself is not a 'RightAction',
+but it is a building block for 'FilterableChange', which in turn is a 'RightAction' for a 'Filterable'.
+-}
+data FilterablePositionChange w
+  = -- | Delete the value at this position
+    FilterablePositionDelete
+  | -- | Change the value at this position by acting with @w@ on it
+    FilterablePositionChange w
+  deriving (Eq, Ord, Read, Show, Functor, Foldable, Traversable)
+
+instance (Semigroup w) => Semigroup (FilterablePositionChange w) where
+  _ <> FilterablePositionDelete = FilterablePositionDelete
+  FilterablePositionDelete <> _ = FilterablePositionDelete
+  FilterablePositionChange w1 <> FilterablePositionChange w2 = FilterablePositionChange $ w1 <> w2
+
+instance (Monoid w) => Monoid (FilterablePositionChange w) where
+  mempty = FilterablePositionChange mempty
+
+-- | For every position in a 'Filterable', change it according to its value, using 'mapMaybe'.
+newtype FilterableChanges s w = FilterableChanges {getFilterableChanges :: s -> FilterablePositionChange w}
+  deriving newtype (Semigroup, Monoid)
+  deriving (Functor)
+
+{- | Depending on the value at a position, change it or delete it.
+
+@'Just' w@ applies the change @w@, while 'Nothing' deletes it.
+-}
+changeMaybe :: (s -> Maybe w) -> FilterableChanges s w
+changeMaybe = FilterableChanges . fmap (maybe FilterablePositionDelete FilterablePositionChange)
+
+instance (Filterable f, RightAction w s) => RightAction (FilterableChanges s w) (f s) where
+  actRight fs FilterableChanges {getFilterableChanges} =
+    fs <&?> \s -> case getFilterableChanges s of
+      FilterablePositionDelete -> Nothing
+      FilterablePositionChange w -> Just $ s `actRight` w
+
+-- | For every position in a 'FilterableWithIndex', change it according to its value, using 'imapMaybe'.
+newtype FilterableWithIndexChanges i s w = FilterableWithIndexChanges {getFilterableWithIndexChanges :: i -> s -> FilterablePositionChange w}
+  deriving newtype (Semigroup, Monoid)
+  deriving (Functor)
+
+instance FunctorWithIndex i (FilterableWithIndexChanges i s) where
+  imap f = FilterableWithIndexChanges . (\c i s -> f i <$> c i s) . getFilterableWithIndexChanges
+
+instance (FilterableWithIndex i f, RightAction w s) => RightAction (FilterableWithIndexChanges i s w) (f s) where
+  actRight fs FilterableWithIndexChanges {getFilterableWithIndexChanges} = flip imapMaybe fs $ \i s -> case getFilterableWithIndexChanges i s of
+    FilterablePositionDelete -> Nothing
+    FilterablePositionChange w -> Just $ s `actRight` w
