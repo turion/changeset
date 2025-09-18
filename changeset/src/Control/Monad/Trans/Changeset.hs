@@ -85,7 +85,7 @@ import Witherable (Filterable (mapMaybe), FilterableWithIndex (..), Witherable (
 
 -- changeset
 import Control.Monad.Changeset.Class
-import Data.Monoid.RightAction (RightAction, actRight)
+import Data.Monoid.RightAction (RightAction, RightTorsor (..), actRight)
 
 -- * The 'ChangesetT' monad transformer
 
@@ -372,6 +372,9 @@ changeSingle = change . singleChange
 instance (RightAction w s) => RightAction (Changes w) s where
   actRight s Changes {getChanges} = foldl' actRight s getChanges
 
+instance (RightTorsor w s) => RightTorsor (Changes w) s where
+  differenceRight = (singleChange .) . differenceRight
+
 -- * Change examples
 
 -- ** Changing lists
@@ -408,6 +411,11 @@ newtype MaybeChange a = MaybeChange {getMaybeChange :: Last (Maybe a)}
 
 instance RightAction (MaybeChange a) (Maybe a) where
   actRight aMaybe MaybeChange {getMaybeChange} = actRight aMaybe getMaybeChange
+
+instance (Eq a) => RightTorsor (MaybeChange a) (Maybe a) where
+  differenceRight Nothing Nothing = mempty
+  differenceRight (Just aOrig) (Just aChanged) = if aOrig == aChanged then mempty else setJust aChanged
+  differenceRight _ ma = setMaybe ma
 
 -- | Set the state to the given 'Maybe' value.
 setMaybe :: Maybe a -> MaybeChange a
