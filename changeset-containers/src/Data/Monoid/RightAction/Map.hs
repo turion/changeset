@@ -8,7 +8,8 @@ import Data.Monoid.RightAction (RightAction (..))
 
 {- | Insert or delete an element in a 'Map'.
 
-To change an element in an 'Map', see the indexed changes in [@changeset-lens@](hackage.haskell.org/package/changeset-lens).
+To change an element in an 'Map', see the indexed changes in [@changeset-lens@](hackage.haskell.org/package/changeset-lens),
+or t'Control.Monad.Trans.Changeset.ImapChange'.
 -}
 data MapChange k a
   = Insert k a
