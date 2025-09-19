@@ -4,9 +4,15 @@ module Data.Monoid.RightAction where
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Dual (..), Endo (..), Last (..))
 import Data.Void (Void)
+import Prelude hiding (zipWith)
 
 -- monoid-extras
 import Data.Monoid.Action (Action (..), Regular (Regular))
+
+-- semialign
+import Data.Zip (Zip (..))
+
+-- * Right action
 
 {- | A [right action](https://en.wikipedia.org/wiki/Group_action#Right_group_action) of @m@ on @s@.
 
@@ -45,6 +51,9 @@ instance (Semigroup m) => RightAction m (Regular m) where
 instance (RightAction m s) => RightAction (Maybe m) s where
   actRight s = maybe s (actRight s)
 
+instance (Semigroup w, RightAction w s, Zip f) => RightAction (f w) (f s) where
+  actRight = zipWith actRight
+
 {- | Endomorphism type with reverse 'Monoid' instance.
 
 The standard 'Endo' type has a left action on @s@ since its composition is defined as @Endo f <> Endo g = Endo (f . g).@
@@ -60,3 +69,40 @@ type REndo s = Dual (Endo s)
 -- | Create an endomorphism monoid that has a right action on @s.@
 rEndo :: (s -> s) -> REndo s
 rEndo = Dual . Endo
+
+{- | Find the action that changed a state to another.
+In other words, @m@ is a general purpose "diff" type for @s@.
+
+The operation is an inverse to 'actRight'.
+
+Laws:
+
+@
+s `differenceRight` (s `actRight` w) = w
+sOrig `actRight` (sOrig `differenceRight` sActed) = sActed
+@
+When @m@ is a 'Monoid':
+@
+s `differenceRight` s = mempty
+@
+
+In group theory, this concept is called a [torsor](https://en.wikipedia.org/wiki/Principal_homogeneous_space).
+See also [monoid-extras' @Torsor@](https://hackage-content.haskell.org/package/monoid-extras/docs/Data-Monoid-Action.html#t:Torsor) for the same concept,
+but for left actions.
+-}
+class RightTorsor m s where
+  differenceRight ::
+    -- | The original state
+    s ->
+    -- | The changed, new state
+    s ->
+    m
+
+instance RightTorsor () s where
+  differenceRight _ _ = ()
+
+instance (Eq s) => RightTorsor (Last s) s where
+  differenceRight sOrig sActed = Last $ if sOrig == sActed then Nothing else Just sActed
+
+instance (RightTorsor w s, Zip f) => RightTorsor (f w) (f s) where
+  differenceRight = zipWith differenceRight
