@@ -405,7 +405,8 @@ data ListChange a
     Cons a
   | -- | Remove the first element (noop on an empty list)
     Pop
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show, Read)
+  deriving (Functor, Foldable, Traversable)
 
 instance RightAction (ListChange a) [a] where
   actRight as (Cons a) = a : as
@@ -415,7 +416,7 @@ instance RightAction (ListChange a) [a] where
 
 -- | An integer can be incremented by 1.
 data Count = Increment
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show, Read)
 
 instance RightAction Count Int where
   actRight count Increment = count + 1
@@ -425,6 +426,7 @@ instance RightAction Count Int where
 -- | Change a 'Maybe' by either deleting the value or forcing it to be present.
 newtype MaybeChange a = MaybeChange {getMaybeChange :: Last (Maybe a)}
   deriving newtype (Eq, Ord, Show, Read, Semigroup, Monoid)
+  deriving (Functor, Foldable, Traversable)
 
 instance RightAction (MaybeChange a) (Maybe a) where
   actRight aMaybe MaybeChange {getMaybeChange} = actRight aMaybe getMaybeChange
@@ -450,7 +452,8 @@ setNothing = setMaybe Nothing
 
 -- | Change a 'Functor' structure by applying a change for every element through 'fmap'.
 newtype FmapChange (f :: Type -> Type) w = FmapChange {getFmapChange :: w}
-  deriving (Eq, Ord, Read, Show, Semigroup, Monoid, Functor)
+  deriving newtype (Eq, Ord, Read, Show, Semigroup, Monoid)
+  deriving (Functor, Foldable, Traversable)
 
 instance (Functor f, RightAction w s) => RightAction (FmapChange f w) (f s) where
   actRight fs FmapChange {getFmapChange} = flip actRight getFmapChange <$> fs
