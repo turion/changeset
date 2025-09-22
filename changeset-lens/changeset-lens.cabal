@@ -50,6 +50,7 @@ common opts
     RankNTypes
     ScopedTypeVariables
     StandaloneDeriving
+    StrictData
     TupleSections
     TypeOperators
 
