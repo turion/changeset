@@ -39,6 +39,11 @@ instance RightAction m ()
 
 instance RightAction Void s
 
+instance (RightAction w1 s1, RightAction w2 s2) => RightAction (w1, w2) (s1, s2) where
+  actRight (s1, s2) (w1, w2) = (s1 `actRight` w1, s2 `actRight` w2)
+
+instance (RightAction w1 s1, RightAction w2 s2) => RightAction (w1, w2) (Either s1 s2)
+
 instance RightAction (Last s) s where
   actRight s (Last ms) = fromMaybe s ms
 

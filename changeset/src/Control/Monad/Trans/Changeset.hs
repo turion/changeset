@@ -470,6 +470,33 @@ type JustChange = FmapChange Maybe
 justChange :: w -> JustChange w
 justChange = FmapChange
 
+-- ** Changing 'Bifunctor's
+
+-- | Change a 'Bifunctor' such as 'Either' or a tuple by changing each type separately.
+data BimapChange w1 w2 = BimapChange
+  { firstChange :: w1
+  -- ^ The change to apply to the first type, e.g. a 'Left', or the first element of a tuple
+  , secondChange :: w2
+  -- ^ The change to apply to the second type, e.g. a 'Right', or the second element of a tuple
+  }
+  deriving stock (Eq, Ord, Show, Read, Functor, Foldable, Traversable)
+
+instance Bifunctor BimapChange where
+  bimap f g BimapChange {firstChange, secondChange} =
+    BimapChange
+      { firstChange = f firstChange
+      , secondChange = g secondChange
+      }
+
+instance Bifoldable BimapChange where
+  bifoldMap f g BimapChange {firstChange, secondChange} = f firstChange <> g secondChange
+
+instance Bitraversable BimapChange where
+  bitraverse f g BimapChange {firstChange, secondChange} = BimapChange <$> f firstChange <*> g secondChange
+
+instance (Bifunctor f, RightAction w1 s1, RightAction w2 s2) => RightAction (BimapChange w1 w2) (f s1 s2) where
+  fs1s2 `actRight` BimapChange {firstChange, secondChange} = bimap (`actRight` firstChange) (`actRight` secondChange) fs1s2
+
 -- ** Changing 'Filterable's
 
 {- | Change all positions in a 'Filterable' in the same way.
