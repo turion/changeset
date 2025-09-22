@@ -47,6 +47,13 @@ instance (RightAction w1 s1, RightAction w2 s2) => RightAction (w1, w2) (Either 
 instance RightAction (Last s) s where
   actRight s (Last ms) = fromMaybe s ms
 
+{- | A change that sets the given value.
+
+This can be applied to any type @s@.
+-}
+set :: s -> Last s
+set = Last . Just
+
 instance (Action m s) => RightAction (Dual m) s where
   actRight s (Dual m) = act m s
 
