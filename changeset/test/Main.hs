@@ -4,6 +4,7 @@ module Main (main) where
 import Control.Monad (replicateM_)
 import Data.Char (toUpper)
 import Data.Function ((&))
+import Data.Monoid (Last (Last))
 import Prelude hiding (Foldable (..))
 
 -- transformers
@@ -21,7 +22,6 @@ import qualified Data.Map as M
 -- changeset
 import Control.Monad.Changeset.Class
 import Control.Monad.Trans.Changeset
-import Data.Monoid (Last (Last))
 import Data.Monoid.RightAction (RightAction (..), rEndo, set)
 import Data.Monoid.RightAction.Coproduct (inL, (:+:))
 
