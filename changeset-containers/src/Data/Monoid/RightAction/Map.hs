@@ -12,6 +12,10 @@ or restrict or delete the keys.
 
 To change an element in an 'Map', see the indexed changes in [@changeset-lens@](hackage.haskell.org/package/changeset-lens),
 or t'Control.Monad.Trans.Changeset.ImapChange'.
+
+The general purpose changes t'Control.Monad.Trans.Changeset.FilterableChange',
+t'Control.Monad.Trans.Changeset.FilterableChanges', t'Control.Monad.Trans.Changeset.FilterableWithIndexChanges',
+and t'Control.Monad.Trans.Changeset.AlignChanges' also apply to 'Map's.
 -}
 data MapChange k a
   = Insert k a

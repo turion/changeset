@@ -9,6 +9,10 @@ import Data.Monoid.RightAction (RightAction (..))
 {- | Insert or delete an element in an 'IntMap'.
 
 To change an element in an 'IntMap', see the indexed changes in [@changeset-lens@](hackage.haskell.org/package/changeset-lens).
+
+The general purpose changes t'Control.Monad.Trans.Changeset.FilterableChange',
+t'Control.Monad.Trans.Changeset.FilterableChanges', t'Control.Monad.Trans.Changeset.FilterableWithIndexChanges',
+and t'Control.Monad.Trans.Changeset.AlignChanges' also apply to 'IntMap's.
 -}
 data IntMapChange a
   = Insert Int a
