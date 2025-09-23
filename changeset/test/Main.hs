@@ -2,7 +2,9 @@ module Main (main) where
 
 -- base
 import Control.Monad (replicateM_)
+import Data.Char (toUpper)
 import Data.Function ((&))
+import Data.Monoid (Last (Last))
 import Prelude hiding (Foldable (..))
 
 -- transformers
@@ -14,11 +16,13 @@ import Test.Tasty
 -- tasty-hunit
 import Test.Tasty.HUnit (testCase, (@?=))
 
+-- containers
+import qualified Data.Map as M
+
 -- changeset
 import Control.Monad.Changeset.Class
 import Control.Monad.Trans.Changeset
-import Data.Monoid (Last (Last))
-import Data.Monoid.RightAction (RightAction (..))
+import Data.Monoid.RightAction (RightAction (..), rEndo, set)
 import Data.Monoid.RightAction.Coproduct (inL, (:+:))
 
 type M = Changeset Int (Changes Count)
@@ -80,5 +84,41 @@ main =
           "Coproduct"
           [ testCase ":+: is monoid morphism" $
               (0 :: Int) `actRight` (inL (Last (Just 1)) <> inL (Last (Just 2)) :: Last Int :+: Last Int) @?= 0 `actRight` (inL (Last (Just (1 :: Int)) <> Last (Just 2)) :: Last Int :+: Last Int)
+          ]
+      , testGroup
+          "FilterableChange"
+          [ testCase "Can change a map with FilterableChange" $
+              M.fromList [(0 :: Int, "hello"), (1, "world")] `actRight` FilterableChange (justChange $ ImapChange (\i -> if i == 2 then rEndo toUpper else mempty))
+                @?= M.fromList [(0 :: Int, "heLlo"), (1, "woRld")]
+          ]
+      , testGroup
+          "FilterableChanges"
+          [ testCase "Can change a map depending on content" $
+              M.fromList [(0 :: Int, "hello"), (1, "world"), (2, "!")]
+                `actRight` FilterableChanges
+                  ( \case
+                      "hello" -> FilterablePositionChange (set "hi")
+                      "!" -> FilterablePositionDelete
+                      _ -> mempty
+                  )
+                @?= M.fromList [(0 :: Int, "hi"), (1, "world")]
+          ]
+      , testGroup
+          "AlignChanges"
+          [ testCase "Can change a map with another map" $
+              M.fromList
+                [ (0 :: Int, "hello")
+                , (1, "world")
+                , (2, "!")
+                ]
+                `actRight` AlignChanges
+                  ( M.fromList
+                      [ (0 :: Int, SetAlignPosition "hi")
+                      , (1, ChangeAlignPosition $ FmapChange @[] $ rEndo toUpper)
+                      , (2, DeleteAlignPosition)
+                      , (3, SetAlignPosition "...")
+                      ]
+                  )
+                @?= M.fromList [(0 :: Int, "hi"), (1, "WORLD"), (3, "...")]
           ]
       ]

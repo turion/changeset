@@ -10,7 +10,7 @@ import Control.Monad.Trans.Class (MonadTrans (..))
 import Control.Monad.Morph (MFunctor (..))
 
 -- changeset
-import Data.Monoid.RightAction (RightAction)
+import Data.Monoid.RightAction (RightAction, RightTorsor (differenceRight))
 
 {- | Monads containing changeset state.
 
@@ -35,3 +35,11 @@ instance {-# OVERLAPPABLE #-} (Monad m, Monad (t m), MonadTrans t, MFunctor t, M
   changeset = lift . changeset
   change = lift . change
   current = lift current
+
+{- | Calculate the difference from the current state to the explicitly given state, and return it.
+
+With a lawful @'RightTorsor' w s@ instance, it can be expected that after then applying the difference, the state is the explicitly given one:
+After @diff s >>= change@, the current state is @s@.
+-}
+diff :: (RightTorsor w s, MonadChangeset s w m) => s -> m w
+diff s = (`differenceRight` s) <$> current

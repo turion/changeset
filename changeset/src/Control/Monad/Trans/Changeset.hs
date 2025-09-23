@@ -56,11 +56,17 @@ module Control.Monad.Trans.Changeset where
 -- base
 import Control.Applicative (Alternative (..))
 import Control.Monad (MonadPlus)
+import Data.Bifoldable (Bifoldable (..))
 import Data.Bifunctor (Bifunctor (..))
+import Data.Bitraversable (Bitraversable (..))
+import Data.Coerce (coerce)
 import Data.Foldable (Foldable (..))
 import Data.Function ((&))
 import Data.Functor ((<&>))
+import Data.Functor.Classes (Eq1, Ord1, Read1, Show1)
 import Data.Functor.Identity (Identity (runIdentity))
+import Data.Kind (Type)
+import Data.Monoid (Last (..))
 import Data.Tuple (swap)
 import Prelude hiding (Foldable ())
 
@@ -79,13 +85,22 @@ import Control.Monad.State.Class (MonadState (..))
 import Control.Monad.Writer.Class (MonadWriter (..))
 
 -- witherable
-import Witherable (Filterable (mapMaybe), Witherable (wither))
+import Witherable (Filterable (..), FilterableWithIndex (..), Witherable (wither), (<&?>))
+
+-- these
+import Data.These (these)
+
+-- semialign
+import Data.Semialign (Align (..), Semialign (..), salign)
+
+-- indexed-traversable
+import Data.Foldable.WithIndex (FoldableWithIndex (..))
+import Data.Functor.WithIndex (FunctorWithIndex (..))
+import Data.Traversable.WithIndex (TraversableWithIndex (..))
 
 -- changeset
 import Control.Monad.Changeset.Class
-import Data.Kind (Type)
-import Data.Monoid (Last (..))
-import Data.Monoid.RightAction (RightAction, actRight)
+import Data.Monoid.RightAction (RightAction (..), RightTorsor (..))
 
 -- * The 'ChangesetT' monad transformer
 
@@ -336,12 +351,17 @@ In that case, 'Changes' is handy.
 It serves as a container for changes that don't have a 'Monoid' or 'Semigroup' instance.
 All changes are applied sequentially.
 
+Mathematically, this is the free monoid over the type of single changes.
+
 To inspect or edit 'Changes', see the type classes 'Functor', 'Foldable', 'Traversable', 'Filterable' and 'Witherable'.
 -}
 newtype Changes w = Changes {getChanges :: Seq w}
   deriving (Show, Read, Eq, Ord)
-  deriving newtype (Semigroup, Monoid, Foldable, Functor)
+  deriving newtype (Semigroup, Monoid, Foldable, Functor, FunctorWithIndex Int, FoldableWithIndex Int)
   deriving (Traversable)
+
+instance TraversableWithIndex Int Changes where
+  itraverse f = fmap Changes . itraverse f . getChanges
 
 instance Filterable Changes where
   mapMaybe f = Changes . mapMaybe f . getChanges
@@ -358,7 +378,7 @@ changes = Changes . fromList
 When @'addChange' w cs@ acts on a state with 'actRight', @w@ will be applied last.
 -}
 addChange :: w -> Changes w -> Changes w
-addChange w = Changes . (|> w) . getChanges
+addChange w = coerce (|> w)
 
 -- | Create a 'Changes' from a single change.
 singleChange :: w -> Changes w
@@ -371,6 +391,9 @@ changeSingle = change . singleChange
 -- | Apply all changes sequentially
 instance (RightAction w s) => RightAction (Changes w) s where
   actRight s Changes {getChanges} = foldl' actRight s getChanges
+
+instance (RightTorsor w s) => RightTorsor (Changes w) s where
+  differenceRight = (singleChange .) . differenceRight
 
 -- * Change examples
 
@@ -385,7 +408,8 @@ data ListChange a
     Cons a
   | -- | Remove the first element (noop on an empty list)
     Pop
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show, Read)
+  deriving (Functor, Foldable, Traversable)
 
 instance RightAction (ListChange a) [a] where
   actRight as (Cons a) = a : as
@@ -395,7 +419,7 @@ instance RightAction (ListChange a) [a] where
 
 -- | An integer can be incremented by 1.
 data Count = Increment
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show, Read)
 
 instance RightAction Count Int where
   actRight count Increment = count + 1
@@ -405,9 +429,15 @@ instance RightAction Count Int where
 -- | Change a 'Maybe' by either deleting the value or forcing it to be present.
 newtype MaybeChange a = MaybeChange {getMaybeChange :: Last (Maybe a)}
   deriving newtype (Eq, Ord, Show, Read, Semigroup, Monoid)
+  deriving (Functor, Foldable, Traversable)
 
 instance RightAction (MaybeChange a) (Maybe a) where
   actRight aMaybe MaybeChange {getMaybeChange} = actRight aMaybe getMaybeChange
+
+instance (Eq a) => RightTorsor (MaybeChange a) (Maybe a) where
+  differenceRight Nothing Nothing = mempty
+  differenceRight (Just aOrig) (Just aChanged) = if aOrig == aChanged then mempty else setJust aChanged
+  differenceRight _ ma = setMaybe ma
 
 -- | Set the state to the given 'Maybe' value.
 setMaybe :: Maybe a -> MaybeChange a
@@ -425,7 +455,8 @@ setNothing = setMaybe Nothing
 
 -- | Change a 'Functor' structure by applying a change for every element through 'fmap'.
 newtype FmapChange (f :: Type -> Type) w = FmapChange {getFmapChange :: w}
-  deriving (Eq, Ord, Read, Show, Semigroup, Monoid, Functor)
+  deriving newtype (Eq, Ord, Read, Show, Semigroup, Monoid)
+  deriving (Functor, Foldable, Traversable)
 
 instance (Functor f, RightAction w s) => RightAction (FmapChange f w) (f s) where
   actRight fs FmapChange {getFmapChange} = flip actRight getFmapChange <$> fs
@@ -438,3 +469,205 @@ type JustChange = FmapChange Maybe
 -- | Apply changes only to 'Just' values.
 justChange :: w -> JustChange w
 justChange = FmapChange
+
+-- ** Changing 'Bifunctor's
+
+-- | Change a 'Bifunctor' such as 'Either' or a tuple by changing each type separately.
+data BimapChange w1 w2 = BimapChange
+  { firstChange :: w1
+  -- ^ The change to apply to the first type, e.g. a 'Left', or the first element of a tuple
+  , secondChange :: w2
+  -- ^ The change to apply to the second type, e.g. a 'Right', or the second element of a tuple
+  }
+  deriving stock (Eq, Ord, Show, Read, Functor, Foldable, Traversable)
+
+instance Bifunctor BimapChange where
+  bimap f g BimapChange {firstChange, secondChange} =
+    BimapChange
+      { firstChange = f firstChange
+      , secondChange = g secondChange
+      }
+
+instance Bifoldable BimapChange where
+  bifoldMap f g BimapChange {firstChange, secondChange} = f firstChange <> g secondChange
+
+instance Bitraversable BimapChange where
+  bitraverse f g BimapChange {firstChange, secondChange} = BimapChange <$> f firstChange <*> g secondChange
+
+instance (Bifunctor f, RightAction w1 s1, RightAction w2 s2) => RightAction (BimapChange w1 w2) (f s1 s2) where
+  fs1s2 `actRight` BimapChange {firstChange, secondChange} = bimap (`actRight` firstChange) (`actRight` secondChange) fs1s2
+
+-- ** Changing 'Filterable's
+
+{- | Change all positions in a 'Filterable' in the same way.
+
+For a 'Filterable' @f s@, the change type must have a 'RightAction' instance on @'Maybe' s@, not @s@,
+where 'Nothing' denotes deletion of the position.
+
+(If you don't want to delete positions, you are probably looking for 'FmapChange' or 'JustChange' instead.)
+-}
+newtype FilterableChange w = FilterableChange {getFilterableChange :: w}
+  deriving newtype (Show, Eq, Ord, Read)
+  deriving stock (Foldable, Functor, Traversable)
+
+instance (Filterable f, RightAction w (Maybe s)) => RightAction (FilterableChange w) (f s) where
+  actRight fs FilterableChange {getFilterableChange} = fs <&?> flip actRight getFilterableChange . Just
+
+{- | Change or delete a position in a 'Filterable'.
+
+This type in itself is not a 'RightAction',
+but it is a building block for 'FilterableChange', which in turn is a 'RightAction' for a 'Filterable'.
+-}
+data FilterablePositionChange w
+  = -- | Delete the value at this position
+    FilterablePositionDelete
+  | -- | Change the value at this position by acting with @w@ on it
+    FilterablePositionChange w
+  deriving (Eq, Ord, Read, Show, Functor, Foldable, Traversable)
+
+instance (Semigroup w) => Semigroup (FilterablePositionChange w) where
+  _ <> FilterablePositionDelete = FilterablePositionDelete
+  FilterablePositionDelete <> _ = FilterablePositionDelete
+  FilterablePositionChange w1 <> FilterablePositionChange w2 = FilterablePositionChange $ w1 <> w2
+
+instance (Monoid w) => Monoid (FilterablePositionChange w) where
+  mempty = FilterablePositionChange mempty
+
+-- | For every position in a 'Filterable', change it according to its value, using 'mapMaybe'.
+newtype FilterableChanges s w = FilterableChanges {getFilterableChanges :: s -> FilterablePositionChange w}
+  deriving newtype (Semigroup, Monoid)
+  deriving (Functor)
+
+{- | Depending on the value at a position, change it or delete it.
+
+@'Just' w@ applies the change @w@, while 'Nothing' deletes it.
+-}
+changeMaybe :: (s -> Maybe w) -> FilterableChanges s w
+changeMaybe = FilterableChanges . fmap (maybe FilterablePositionDelete FilterablePositionChange)
+
+instance (Filterable f, RightAction w s) => RightAction (FilterableChanges s w) (f s) where
+  actRight fs FilterableChanges {getFilterableChanges} =
+    fs <&?> \s -> case getFilterableChanges s of
+      FilterablePositionDelete -> Nothing
+      FilterablePositionChange w -> Just $ s `actRight` w
+
+-- | For every position in a 'FilterableWithIndex', change it according to its value, using 'imapMaybe'.
+newtype FilterableWithIndexChanges i s w = FilterableWithIndexChanges {getFilterableWithIndexChanges :: i -> s -> FilterablePositionChange w}
+  deriving newtype (Semigroup, Monoid)
+  deriving (Functor)
+
+instance FunctorWithIndex i (FilterableWithIndexChanges i s) where
+  imap f = FilterableWithIndexChanges . (\c i s -> f i <$> c i s) . getFilterableWithIndexChanges
+
+instance (FilterableWithIndex i f, RightAction w s) => RightAction (FilterableWithIndexChanges i s w) (f s) where
+  actRight fs FilterableWithIndexChanges {getFilterableWithIndexChanges} = flip imapMaybe fs $ \i s -> case getFilterableWithIndexChanges i s of
+    FilterablePositionDelete -> Nothing
+    FilterablePositionChange w -> Just $ s `actRight` w
+
+-- ** Changing 'Filterable' 'Semialign's
+
+{- | Change, set, or delete a position in a 'Filterable' that is also an instance of 'Semialign'.
+
+This type is not a 'RightAction',
+but it is the building block for 'AlignChanges', which is a 'RightAction' on a 'Filterable' 'Semialign'.
+-}
+data AlignPositionChange w s
+  = -- | Delete the value at this position
+    DeleteAlignPosition
+  | -- | Change the value at this position (if it exists) by applying @w@
+    ChangeAlignPosition w
+  | -- | Set the value at this position, possibly creating it if it doesn't yet exist
+    SetAlignPosition s
+  deriving (Eq, Ord, Read, Show, Functor, Foldable, Traversable)
+
+instance Bifoldable AlignPositionChange where
+  bifoldMap _ _ DeleteAlignPosition = mempty
+  bifoldMap f _ (ChangeAlignPosition w) = f w
+  bifoldMap _ f (SetAlignPosition s) = f s
+
+instance Bifunctor AlignPositionChange where
+  bimap _ _ DeleteAlignPosition = DeleteAlignPosition
+  bimap f _ (ChangeAlignPosition w) = ChangeAlignPosition $ f w
+  bimap _ f (SetAlignPosition s) = SetAlignPosition $ f s
+
+instance Bitraversable AlignPositionChange where
+  bitraverse _ _ DeleteAlignPosition = pure DeleteAlignPosition
+  bitraverse f _ (ChangeAlignPosition w) = ChangeAlignPosition <$> f w
+  bitraverse _ f (SetAlignPosition s) = SetAlignPosition <$> f s
+
+instance (Semigroup w, RightAction w s) => Semigroup (AlignPositionChange w s) where
+  _ <> DeleteAlignPosition = DeleteAlignPosition
+  _ <> set@(SetAlignPosition _) = set
+  DeleteAlignPosition <> ChangeAlignPosition _ = DeleteAlignPosition
+  ChangeAlignPosition s1 <> ChangeAlignPosition s2 = ChangeAlignPosition $ s1 <> s2
+  SetAlignPosition s <> ChangeAlignPosition w = SetAlignPosition $ s `actRight` w
+
+instance (Monoid w, RightAction w s) => Monoid (AlignPositionChange w s) where
+  mempty = ChangeAlignPosition mempty
+
+{- | Change, set, or delete elements in a 'Filterable' that implements 'Semialign'.
+
+Containers implementing 'Filterable' and 'Semialign' are fundamentally those that can be diffed easily.
+Therefore, they have a general purpose 'RightTorsor' implementation.
+
+Note that for the more special 'Zip' class, a simpler instance without a custom change type already exists.
+-}
+newtype AlignChanges (f :: Type -> Type) w s = AlignChanges {getAlignChanges :: f (AlignPositionChange w s)}
+  deriving (Functor, Foldable, Traversable)
+
+instance (Functor f) => Bifunctor (AlignChanges f) where
+  bimap f g = AlignChanges . fmap (bimap f g) . getAlignChanges
+
+instance (FunctorWithIndex i f) => FunctorWithIndex i (AlignChanges f w) where
+  imap f = AlignChanges . imap (fmap . f) . getAlignChanges
+
+instance (Foldable f) => Bifoldable (AlignChanges f) where
+  bifoldMap f g AlignChanges {getAlignChanges} = foldMap (bifoldMap f g) getAlignChanges
+
+instance (FoldableWithIndex i f) => FoldableWithIndex i (AlignChanges f w) where
+  ifoldMap f = ifoldMap (foldMap . f) . getAlignChanges
+
+instance (Traversable f) => Bitraversable (AlignChanges f) where
+  bitraverse f g = fmap AlignChanges . traverse (bitraverse f g) . getAlignChanges
+
+instance (TraversableWithIndex i f) => TraversableWithIndex i (AlignChanges f w) where
+  itraverse f = fmap AlignChanges . itraverse (traverse . f) . getAlignChanges
+
+-- The quantified constraints here are only needed for GHC <= 9.4, feel free to remove when support for these is dropped
+deriving instance (Show1 f, (forall a. (Show a) => Show (f a)), Show w, Show s) => Show (AlignChanges f w s)
+
+deriving instance (Read1 f, (forall a. (Read a) => Read (f a)), Read w, Read s) => Read (AlignChanges f w s)
+
+deriving instance (Eq1 f, (forall a. (Eq a) => Eq (f a)), Eq w, Eq s) => Eq (AlignChanges f w s)
+
+-- Also the Eq (AlignChanges f w s) superclass is only needed for GHC <= 9.4
+deriving instance (Eq (AlignChanges f w s), Ord1 f, (forall b. (Ord b) => Ord (f b)), Ord w, Ord s) => Ord (AlignChanges f w s)
+
+instance (Semialign f, Semigroup w, RightAction w s) => Semigroup (AlignChanges f w s) where
+  AlignChanges ac1 <> AlignChanges ac2 = AlignChanges $ salign ac1 ac2
+
+instance (Semigroup w, RightAction w s, Align f) => Monoid (AlignChanges f w s) where
+  mempty = AlignChanges nil
+
+instance (Semialign f, Filterable f, RightAction w s) => RightAction (AlignChanges f w s) (f s) where
+  actRight fs AlignChanges {getAlignChanges} = catMaybes $ alignWith (these Just maybeCreateNew changeExisting) fs getAlignChanges
+    where
+      changeExisting sOrig = \case
+        (SetAlignPosition sNew) -> Just sNew
+        ChangeAlignPosition w -> Just $ sOrig `actRight` w
+        DeleteAlignPosition -> Nothing
+      maybeCreateNew = \case
+        (SetAlignPosition s) -> Just s
+        _ -> Nothing
+
+instance (Semialign f, RightTorsor w s) => RightTorsor (AlignChanges f w s) (f s) where
+  differenceRight = ((AlignChanges .) .) $ alignWith $ these (const DeleteAlignPosition) SetAlignPosition $ (ChangeAlignPosition .) . differenceRight
+
+-- ** Changing 'FunctorWithIndex'
+
+-- | Change a 'FunctorWithIndex' structure by applying the change to every element through 'imap'.
+newtype ImapChange i w = ImapChange {getImapChange :: i -> w}
+  deriving newtype (Semigroup, Monoid, Functor)
+
+instance (RightAction w s, FunctorWithIndex i f) => RightAction (ImapChange i w) (f s) where
+  actRight fs ImapChange {getImapChange} = imap (flip actRight . getImapChange) fs

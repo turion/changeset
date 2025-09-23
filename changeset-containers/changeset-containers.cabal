@@ -45,6 +45,7 @@ common opts
     NamedFieldPuns
     RankNTypes
     ScopedTypeVariables
+    StrictData
     TupleSections
     TypeOperators
 

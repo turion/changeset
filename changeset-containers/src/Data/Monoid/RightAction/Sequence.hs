@@ -6,6 +6,10 @@ import Data.Sequence
 {- | Insert or delete an element at either end of a 'Seq'.
 
 To change an element in a 'Seq', see the indexed changes in [@changeset-lens@](hackage.haskell.org/package/changeset-lens).
+
+The general purpose changes t'Control.Monad.Trans.Changeset.FilterableChange',
+t'Control.Monad.Trans.Changeset.FilterableChanges', t'Control.Monad.Trans.Changeset.FilterableWithIndexChanges',
+and t'Control.Monad.Trans.Changeset.AlignChanges' also apply to 'Seq'uences.
 -}
 data SeqChange a
   = -- | Prepend an element
