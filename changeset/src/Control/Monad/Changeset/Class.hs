@@ -29,7 +29,10 @@ class (Monad m, Monoid w, RightAction w s) => MonadChangeset s w m | m -> s, m -
   change :: w -> m ()
 
   -- | Observe the current state.
+  change w = changeset $ const ((), w)
+
   current :: m s
+  current = changeset (,mempty)
 
 instance {-# OVERLAPPABLE #-} (Monad m, Monad (t m), MonadTrans t, MFunctor t, MonadChangeset s w m) => MonadChangeset s w (t m) where
   changeset = lift . changeset
