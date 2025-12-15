@@ -58,7 +58,7 @@ library
     changeset ==0.1.0.3,
     containers >=0.6 && <0.8,
     dependent-map ^>=0.4,
-    monoid-extras ^>=0.6,
+    monoid-extras ^>=0.7,
     reflex >=0.8.2.1 && <0.10,
     some ^>=1.0.1,
 

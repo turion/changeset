@@ -11,11 +11,11 @@
   };
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable-small";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { nixpkgs, flake-utils, ... }:
     with builtins;
     with nixpkgs.lib;
     let
@@ -30,13 +30,6 @@
 
       # Always keep in sync with the tested-with section in the cabal file
       supportedGhcs = [
-        # Not supported in nixpkgs anymore
-        # "ghc86"
-        # "ghc88"
-
-        "ghc810"
-        "ghc90"
-        "ghc92"
         "ghc94"
         "ghc96"
         "ghc98"
@@ -50,15 +43,32 @@
 
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          haskellPackagesFor = genAttrs supportedGhcs (ghc: pkgs.haskell.packages.${ghc})
-          // { default = pkgs.haskellPackages; };
 
-          hoverlay = hfinal: hprev: with pkgs.haskell.lib;
+          # Haskell package overrides for dependencies
+          dependenciesOverrides = with pkgs.haskell.lib;
+            composeManyExtensions [
+              (hfinal: hprev: {
+                reflex = dontCheck (doJailbreak hprev.reflex);
+              })
+            ];
+
+          haskellPackagesFor = mapAttrs
+            (ghcVersion: haskellPackages: haskellPackages.override (_: {
+              overrides = dependenciesOverrides;
+            }))
+            (genAttrs supportedGhcs (ghc: pkgs.haskell.packages.${ghc})
+            // { default = pkgs.haskellPackages; });
+
+          # Haskell package overrides to set the definitions of the locally defined packages to the current version in this repo
+          localPackagesOverrides = hfinal: hprev: with pkgs.haskell.lib;
             (mapAttrs (pname: path: hfinal.callCabal2nix pname path { }) localPackages);
 
           haskellPackagesExtended = mapAttrs
-            (ghcVersion: haskellPackages: haskellPackages.override (_: {
-              overrides = hoverlay;
+            (ghcVersion: haskellPackages: haskellPackages.override (haskellPackagesPrevious: {
+              overrides = composeManyExtensions [
+                haskellPackagesPrevious.overrides
+                localPackagesOverrides
+              ];
             }))
             haskellPackagesFor;
 
@@ -87,7 +97,7 @@
             (ghcVersion: haskellPackages: haskellPackages.shellFor {
               packages = hps: attrValues (localPackagesFor (haskellPackagesExtended.${ghcVersion}));
               nativeBuildInputs = (
-                lib.optional (versionAtLeast haskellPackages.ghc.version "9.4")
+                lib.optional (versionAtLeast haskellPackages.ghc.version "9.6")
                   haskellPackages.haskell-language-server)
               ++ (with pkgs;
                 [ cabal-install ]

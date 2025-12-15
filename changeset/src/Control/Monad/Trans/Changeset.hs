@@ -236,7 +236,10 @@ It has to output the action that will be applied instead.
 revise :: (Functor m) => ChangesetT s w m (a, s -> w -> w) -> ChangesetT s w m a
 revise ChangesetT {getChangesetT} = ChangesetT $ \s -> getChangesetT s <&> \(w, (a, f)) -> (f s w, a)
 
--- | Adds the to-be-applied changes to the foreground value.
+{- | Adds the to-be-applied changes to the foreground value.
+
+This is similar to 'Control.Monad.Trans.Writer.listen'.
+-}
 changelog :: (Functor m) => ChangesetT s w m a -> ChangesetT s w m (a, w)
 changelog ChangesetT {getChangesetT} = ChangesetT $ fmap (\(w, a) -> (w, (a, w))) . getChangesetT
 

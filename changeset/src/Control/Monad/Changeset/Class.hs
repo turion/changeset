@@ -16,6 +16,36 @@ import Data.Monoid.RightAction (RightAction, RightTorsor (differenceRight))
 
 This usually implies that the 'Control.Monad.Trans.Changeset.ChangesetT' monad transformer is part of the monad transformer stack of @m.@
 See its documentation for details.
+
+Two laws for these methods boil down to the requirement that 'change' and 'current' are special cases of 'changeset':
+
+@
+  change w = changeset $ const ((), w)
+  current = changeset (, mempty)
+@
+
+The central law ensures that future  states are affected by the past changes through right action:
+
+@
+forall MonadChangeset s w m
+       f :: s -> (a, w)
+       g :: a -> s -> (b, w) .
+changeset f >>= (changeset . g)
+  =
+changeset $ \s -> let (a, w) = f s in g a $ s `actRight` w
+@
+
+This law has several easier to grasp corollaries:
+@
+change w >> current = do
+  s <- current
+  change w
+  return $ s 'actRight' w
+
+change w1 >> change w2 = change (w1 <> w2)
+
+current s1 >> current s2 = current s2
+@
 -}
 class (Monad m, Monoid w, RightAction w s) => MonadChangeset s w m | m -> s, m -> w where
   -- | Apply a changeset to the state.
@@ -25,11 +55,18 @@ class (Monad m, Monoid w, RightAction w s) => MonadChangeset s w m | m -> s, m -
     m a
 
   -- | Apply a change to the state.
-  -- The 'Action' instance is used to mutate the state.
+  --
+  --   The 'Action' instance is used to mutate the state.
+  --
+  --   This is a special case of 'changeset' where the current state is disregarded.
   change :: w -> m ()
+  change w = changeset $ const ((), w)
 
   -- | Observe the current state.
+  --
+  --   This is a special case of 'changeset' where the state is not changed.
   current :: m s
+  current = changeset (,mempty)
 
 instance {-# OVERLAPPABLE #-} (Monad m, Monad (t m), MonadTrans t, MFunctor t, MonadChangeset s w m) => MonadChangeset s w (t m) where
   changeset = lift . changeset
