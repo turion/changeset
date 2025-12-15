@@ -1,6 +1,6 @@
 cabal-version: 2.4
 name: changeset
-version: 0.1.0.3
+version: 0.1.1
 synopsis: Stateful monad transformer based on monoidal actions
 description:
   A general state monad transformer with separate types for the state and the possible changes.
