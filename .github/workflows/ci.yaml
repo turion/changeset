@@ -36,7 +36,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     runs-on: ubuntu-latest
     steps:
-      - uses: kleidukos/get-tested@0.1.7.1
+      - uses: kleidukos/get-tested@v0.1.9.1
         id: set-matrix
         with:
           cabal-file: "changeset/changeset.cabal"
