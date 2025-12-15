@@ -43,15 +43,32 @@
 
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          haskellPackagesFor = genAttrs supportedGhcs (ghc: pkgs.haskell.packages.${ghc})
-          // { default = pkgs.haskellPackages; };
 
-          hoverlay = hfinal: hprev: with pkgs.haskell.lib;
+          # Haskell package overrides for dependencies
+          dependenciesOverrides = with pkgs.haskell.lib;
+            composeManyExtensions [
+              (hfinal: hprev: {
+                reflex = dontCheck (doJailbreak hprev.reflex);
+              })
+            ];
+
+          haskellPackagesFor = mapAttrs
+            (ghcVersion: haskellPackages: haskellPackages.override (_: {
+              overrides = dependenciesOverrides;
+            }))
+            (genAttrs supportedGhcs (ghc: pkgs.haskell.packages.${ghc})
+            // { default = pkgs.haskellPackages; });
+
+          # Haskell package overrides to set the definitions of the locally defined packages to the current version in this repo
+          localPackagesOverrides = hfinal: hprev: with pkgs.haskell.lib;
             (mapAttrs (pname: path: hfinal.callCabal2nix pname path { }) localPackages);
 
           haskellPackagesExtended = mapAttrs
-            (ghcVersion: haskellPackages: haskellPackages.override (_: {
-              overrides = hoverlay;
+            (ghcVersion: haskellPackages: haskellPackages.override (haskellPackagesPrevious: {
+              overrides = composeManyExtensions [
+                haskellPackagesPrevious.overrides
+                localPackagesOverrides
+              ];
             }))
             haskellPackagesFor;
 
