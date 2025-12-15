@@ -1,7 +1,10 @@
 module Data.Monoid.RightAction.Sequence where
 
-import Data.Monoid.RightAction (RightAction (..))
+-- containers
 import Data.Sequence
+
+-- changeset
+import Data.Monoid.RightAction (RightAction (..))
 
 {- | Insert or delete an element at either end of a 'Seq'.
 
