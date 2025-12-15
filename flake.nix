@@ -30,13 +30,6 @@
 
       # Always keep in sync with the tested-with section in the cabal file
       supportedGhcs = [
-        # Not supported in nixpkgs anymore
-        # "ghc86"
-        # "ghc88"
-
-        "ghc810"
-        "ghc90"
-        "ghc92"
         "ghc94"
         "ghc96"
         "ghc98"
@@ -87,7 +80,7 @@
             (ghcVersion: haskellPackages: haskellPackages.shellFor {
               packages = hps: attrValues (localPackagesFor (haskellPackagesExtended.${ghcVersion}));
               nativeBuildInputs = (
-                lib.optional (versionAtLeast haskellPackages.ghc.version "9.4")
+                lib.optional (versionAtLeast haskellPackages.ghc.version "9.6")
                   haskellPackages.haskell-language-server)
               ++ (with pkgs;
                 [ cabal-install ]
