@@ -1,5 +1,8 @@
 module Data.Monoid.RightAction.IntMap where
 
+-- base
+import GHC.Generics (Generic)
+
 -- containers
 import Data.IntMap
 
@@ -17,7 +20,7 @@ and t'Control.Monad.Trans.Changeset.AlignChanges' also apply to 'IntMap's.
 data IntMapChange a
   = Insert Int a
   | Delete Int
-  deriving (Show, Read, Eq, Ord, Functor)
+  deriving stock (Show, Read, Eq, Ord, Functor, Generic)
 
 instance RightAction (IntMapChange a) (IntMap a) where
   actRight m (Insert k a) = insert k a m

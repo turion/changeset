@@ -7,6 +7,7 @@ import Data.Functor ((<&>))
 import Data.Functor.Compose
 import Data.Functor.Identity (Identity (Identity))
 import Data.List.NonEmpty (NonEmpty, fromList)
+import GHC.Generics (Generic)
 
 -- monoid-extras
 import Data.Monoid.Action
@@ -39,6 +40,7 @@ import Control.Monad.Trans.Changeset (ChangesetT (..))
 data DMapChange k f v
   = Insert (k v) (f v)
   | Delete (k v)
+  deriving stock (Functor, Foldable, Traversable, Generic)
 
 instance (GCompare k) => Action (DMapChange k f v) (DMap k f) where
   act (Insert k v) = insert k v

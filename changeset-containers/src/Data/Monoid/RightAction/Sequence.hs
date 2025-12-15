@@ -1,5 +1,8 @@
 module Data.Monoid.RightAction.Sequence where
 
+-- base
+import GHC.Generics (Generic)
+
 -- containers
 import Data.Sequence
 
@@ -23,7 +26,7 @@ data SeqChange a
     Uncons
   | -- | Drop an element from the right
     Unsnoc
-  deriving (Show, Read, Eq, Ord, Functor)
+  deriving stock (Show, Read, Eq, Ord, Functor, Generic)
 
 instance RightAction (SeqChange a) (Seq a) where
   actRight s (Cons a) = a <| s
