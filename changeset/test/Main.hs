@@ -5,6 +5,7 @@ import Control.Monad (replicateM_)
 import Data.Char (toUpper)
 import Data.Function ((&))
 import Data.Monoid (Last (Last))
+import GHC.Generics (Generic)
 import Prelude hiding (Foldable (..))
 
 -- transformers
@@ -24,6 +25,7 @@ import Control.Monad.Changeset.Class
 import Control.Monad.Trans.Changeset
 import Data.Monoid.RightAction (RightAction (..), rEndo, set)
 import Data.Monoid.RightAction.Coproduct (inL, (:+:))
+import Data.Monoid.RightAction.Generic (actRightGGeneric, actRightGeneric)
 
 type M = Changeset Int (Changes Count)
 
@@ -121,4 +123,62 @@ main =
                   )
                 @?= M.fromList [(0 :: Int, "hi"), (1, "WORLD"), (3, "...")]
           ]
+      , testGroup
+          "Generic"
+          [ testGroup
+              "actRightGeneric"
+              [ testCase "single change left" $ 0 `actRight` IntActionCounts Increment mempty @?= (1 :: Int)
+              , testCase "single change product" $ 0 `actRight` IntActionCounts Increment (singleChange Increment) @?= (2 :: Int)
+              , testCase "single change right" $ 0 `actRight` IntActionLast (set 100) @?= (100 :: Int)
+              , testCase "single change recursive" $ 0 `actRight` IntActionRec (IntActionLast (set 100)) (IntActionCounts Increment mempty) @?= (101 :: Int)
+              , testCase "changes" $
+                  (0 :: Int)
+                    `actRight` changes
+                      [ IntActionCounts Increment mempty
+                      , IntActionLast (set 10)
+                      , IntActionCounts Increment (changes [Increment, Increment])
+                      , IntActionRec (IntActionRec (IntActionCounts Increment mempty) (IntActionCounts Increment mempty)) (IntActionCounts Increment (changes [Increment, Increment]))
+                      ]
+                    @?= 18
+              ]
+          , testGroup
+              "actRightGGeneric"
+              [ testCase "Wrapper changes wrapper" $ Bar 0 `actRight` BarChange Increment @?= Bar 1
+              , testCase "Sum changes product" $ Foo 0 0 [] `actRight` changes [FooChangeInt Increment, FooChangeList (Cons ()), FooChangeInt2 Increment] @?= Foo 1 1 [()]
+              , testCase "Product changes product" $ Foo 0 0 [] `actRight` FooChange2 Increment Nothing (Cons ()) @?= Foo 1 0 [()]
+              ]
+          ]
       ]
+
+data IntAction
+  = IntActionCounts Count (Changes Count)
+  | IntActionLast (Last Int)
+  | IntActionRec IntAction IntAction
+  deriving stock (Generic)
+
+instance RightAction IntAction Int where
+  actRight = actRightGeneric
+
+newtype Bar = Bar Int
+  deriving stock (Generic, Eq, Show)
+
+newtype BarChange = BarChange Count
+  deriving stock (Generic)
+
+instance RightAction BarChange Bar where
+  actRight = actRightGGeneric
+
+data Foo = Foo Int Int [()]
+  deriving stock (Generic, Eq, Show)
+
+data FooChange = FooChangeInt Count | FooChangeInt2 Count | FooChangeList (ListChange ())
+  deriving stock (Generic)
+
+instance RightAction FooChange Foo where
+  actRight = actRightGGeneric
+
+data FooChange2 = FooChange2 Count (Maybe Count) (ListChange ())
+  deriving stock (Generic)
+
+instance RightAction FooChange2 Foo where
+  actRight = actRightGGeneric

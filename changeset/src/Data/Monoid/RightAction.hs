@@ -1,3 +1,5 @@
+{-# LANGUAGE UndecidableInstances #-}
+
 module Data.Monoid.RightAction where
 
 -- base
