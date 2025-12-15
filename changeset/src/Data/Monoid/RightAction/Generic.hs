@@ -1,10 +1,12 @@
 module Data.Monoid.RightAction.Generic where
 
 -- base
+import Control.Monad (guard)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), Rec1 (..), (:*:) (..), (:+:) (..))
 import Prelude hiding (zipWith)
 
 -- changeset
+import Control.Monad.Trans.Changeset (Changes, singleChange)
 import Data.Monoid.RightAction
 
 {- | A class to define generic instances of 'RightAction'. You will rarely need it directly.
@@ -147,3 +149,111 @@ There are several situations where this is useful:
 -}
 actRightGGeneric :: (Generic w, Generic s, GGRightAction (Rep w) (Rep s)) => s -> w -> s
 actRightGGeneric s w = to $ ggActRight (from s) (from w)
+
+{- | A class to define generic instances of 'RightTorsor' for product change types. You will rarely need it directly.
+
+To derive 'RightTorsor' for your custom datatype generically, see 'differenceRightGGeneric'.
+-}
+class GGRightTorsor w s where
+  ggDifferenceRight :: s a -> s a -> w a
+
+instance (RightTorsor w s) => GGRightTorsor (K1 i w) (K1 i' s) where
+  ggDifferenceRight (K1 sOld) (K1 sNew) = K1 $ differenceRight sOld sNew
+
+instance (GGRightTorsor f s) => GGRightTorsor (M1 i c f) (M1 i' c' s) where
+  ggDifferenceRight (M1 sOld) (M1 sNew) = M1 $ ggDifferenceRight sOld sNew
+
+instance {-# OVERLAPPABLE #-} (GGRightTorsor f s) => GGRightTorsor (M1 i c f) s where
+  ggDifferenceRight sOld sNew = M1 $ ggDifferenceRight sOld sNew
+
+instance {-# OVERLAPPABLE #-} (GGRightTorsor f s) => GGRightTorsor f (M1 i c s) where
+  ggDifferenceRight (M1 sOld) (M1 sNew) = ggDifferenceRight sOld sNew
+
+instance (GGRightTorsor fL sL, GGRightTorsor fR sR) => GGRightTorsor (fL :*: fR) (sL :*: sR) where
+  ggDifferenceRight (sLOld :*: sROld) (sLNew :*: sRNew) = ggDifferenceRight sLOld sLNew :*: ggDifferenceRight sROld sRNew
+
+instance (GGRightTorsor f s) => GGRightTorsor (Rec1 f) (Rec1 s) where
+  ggDifferenceRight (Rec1 sOld) (Rec1 sNew) = Rec1 $ ggDifferenceRight sOld sNew
+
+{- | Derive a 'RightTorsor' instance generically for product change types.
+
+If you have a definition of a datatype that contains fields with a 'RightTorsor' instance,
+you can create an instance for the whole datatype with just two lines of boiler plate
+by setting 'differenceRight' to this function:
+
+@
+data Torsor = Torsor (Sum Integer) (Product Rational)
+  deriving stock (Generic)
+
+data TorsorChange2 = TorsorChange2 (Sum Integer) (Product Rational)
+  deriving stock (Generic)
+
+instance RightAction TorsorChange2 Torsor where
+  actRight = actRightGGeneric
+
+instance RightTorsor TorsorChange2 Torsor where
+  differenceRight = differenceRightGGeneric
+@
+
+In many cases where this is sensible, the instance can be derived this way.
+Whenever it typechecks, it will be the inverse to the automatically derived instance from 'actRightGGeneric'.
+-}
+differenceRightGGeneric :: (Generic w, Generic s, GGRightTorsor (Rep w) (Rep s)) => s -> s -> w
+differenceRightGGeneric sOld sNew = to $ ggDifferenceRight (from sOld) (from sNew)
+
+{- | A class to define generic instances of 'RightTorsor' for sum change types. You will rarely need it directly.
+
+To derive 'RightTorsor' for your custom datatype generically, see 'differenceRightGenericChanges'.
+-}
+class GCRightTorsor w s where
+  gcDifferenceRight :: s a -> s a -> Changes (w a)
+
+instance (RightTorsor w s) => GCRightTorsor (K1 i w) (K1 i' s) where
+  gcDifferenceRight (K1 sOld) (K1 sNew) = singleChange $ K1 $ differenceRight sOld sNew
+
+instance (GCRightTorsor f s) => GCRightTorsor (M1 i c f) (M1 i' c' s) where
+  gcDifferenceRight (M1 sOld) (M1 sNew) = M1 <$> gcDifferenceRight sOld sNew
+
+instance {-# OVERLAPPABLE #-} (GCRightTorsor f s) => GCRightTorsor (M1 i c f) s where
+  gcDifferenceRight sOld sNew = M1 <$> gcDifferenceRight sOld sNew
+
+instance {-# OVERLAPPABLE #-} (GCRightTorsor f s) => GCRightTorsor f (M1 i c s) where
+  gcDifferenceRight (M1 sOld) (M1 sNew) = gcDifferenceRight sOld sNew
+
+instance (GCRightTorsor fL sL, GCRightTorsor fR sR, forall a. Eq (sR a), forall a. Eq (sL a)) => GCRightTorsor (fL :+: fR) (sL :*: sR) where
+  gcDifferenceRight (sLOld :*: sROld) (sLNew :*: sRNew) =
+    (guard (sLOld /= sLNew) >> (L1 <$> gcDifferenceRight sLOld sLNew))
+      <> (guard (sROld /= sRNew) >> (R1 <$> gcDifferenceRight sROld sRNew))
+
+instance (GCRightTorsor f s) => GCRightTorsor (Rec1 f) (Rec1 s) where
+  gcDifferenceRight (Rec1 sOld) (Rec1 sNew) = Rec1 <$> gcDifferenceRight sOld sNew
+
+{- | Derive a 'RightTorsor' instance generically for sum change types.
+
+If you have a definition of a datatype that contains fields with a 'RightTorsor' instance,
+you can create an instance for the whole datatype with just two lines of boiler plate
+by setting 'differenceRight' to this function:
+
+@
+data Torsor = Torsor (Sum Integer) (Product Rational)
+  deriving stock (Generic, Eq, Show)
+
+data TorsorChange = TorsorChangeSum (Sum Integer) | TorsorChangeProduct (Product Rational)
+  deriving stock (Generic, Eq, Show)
+
+instance RightAction TorsorChange Torsor where
+  actRight = actRightGGeneric
+
+instance RightTorsor (Changes TorsorChange) Torsor where
+  differenceRight = differenceRightGenericChanges
+@
+
+In this example, @TorsorChangeSum@ will act on the first field of @Torsor@, and @TorsorChangeProduct@ on the second.
+When computing the difference, every field will be compared, and for every difference a change will be created.
+All the changes are collected in a 'Changes' container.
+
+In many cases where this is sensible, the instance can be derived this way.
+Whenever it typechecks, it will be the inverse to the automatically derived instance from 'actRightGGeneric'.
+-}
+differenceRightGenericChanges :: (Generic w, Generic s, GCRightTorsor (Rep w) (Rep s)) => s -> s -> Changes w
+differenceRightGenericChanges sOld sNew = to <$> gcDifferenceRight (from sOld) (from sNew)

@@ -405,7 +405,8 @@ changeSingle = change . singleChange
 instance (RightAction w s) => RightAction (Changes w) s where
   actRight s Changes {getChanges} = foldl' actRight s getChanges
 
-instance (RightTorsor w s) => RightTorsor (Changes w) s where
+-- Marked as overlappable so that generically defined instances with differenceRightGenericChanges are selected
+instance {-# OVERLAPPABLE #-} (RightTorsor w s) => RightTorsor (Changes w) s where
   differenceRight = (singleChange .) . differenceRight
 
 -- * Change examples

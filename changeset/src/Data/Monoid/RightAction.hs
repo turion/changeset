@@ -68,10 +68,10 @@ instance (RightAction m s) => RightAction (Maybe m) s where
 instance (Semigroup w, RightAction w s, Zip f) => RightAction (f w) (f s) where
   actRight = zipWith actRight
 
-instance (Num a) => RightAction (Sum a) (Sum a) where
+instance {-# OVERLAPPING #-} (Num a) => RightAction (Sum a) (Sum a) where
   actRight = (+)
 
-instance (Num a) => RightAction (Product a) (Product a) where
+instance {-# OVERLAPPING #-} (Num a) => RightAction (Product a) (Product a) where
   actRight = (*)
 
 {- | Endomorphism type with reverse 'Monoid' instance.
@@ -129,8 +129,8 @@ instance (Eq s) => RightTorsor (Last s) s where
 instance (RightTorsor w s, Zip f) => RightTorsor (f w) (f s) where
   differenceRight = zipWith differenceRight
 
-instance (Num a) => RightTorsor (Sum a) (Sum a) where
+instance {-# OVERLAPPING #-} (Num a) => RightTorsor (Sum a) (Sum a) where
   differenceRight = flip (-)
 
-instance (Fractional a) => RightTorsor (Product a) (Product a) where
+instance {-# OVERLAPPING #-} (Fractional a) => RightTorsor (Product a) (Product a) where
   differenceRight (Product aOld) (Product aNew) = Product $ aNew / aOld

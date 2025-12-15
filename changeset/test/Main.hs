@@ -4,7 +4,7 @@ module Main (main) where
 import Control.Monad (replicateM_)
 import Data.Char (toUpper)
 import Data.Function ((&))
-import Data.Monoid (Last (Last))
+import Data.Monoid (Last (Last), Product (..), Sum (..))
 import GHC.Generics (Generic)
 import Prelude hiding (Foldable (..))
 
@@ -23,9 +23,9 @@ import qualified Data.Map as M
 -- changeset
 import Control.Monad.Changeset.Class
 import Control.Monad.Trans.Changeset
-import Data.Monoid.RightAction (RightAction (..), rEndo, set)
+import Data.Monoid.RightAction (RightAction (..), RightTorsor (..), rEndo, set)
 import Data.Monoid.RightAction.Coproduct (inL, (:+:))
-import Data.Monoid.RightAction.Generic (actRightGGeneric, actRightGeneric)
+import Data.Monoid.RightAction.Generic (actRightGGeneric, actRightGeneric, differenceRightGGeneric, differenceRightGenericChanges)
 
 type M = Changeset Int (Changes Count)
 
@@ -147,6 +147,17 @@ main =
               , testCase "Sum changes product" $ Foo 0 0 [] `actRight` changes [FooChangeInt Increment, FooChangeList (Cons ()), FooChangeInt2 Increment] @?= Foo 1 1 [()]
               , testCase "Product changes product" $ Foo 0 0 [] `actRight` FooChange2 Increment Nothing (Cons ()) @?= Foo 1 0 [()]
               ]
+          , testGroup
+              "differenceRightGGeneric"
+              [ testGroup "Wrapper" $ torsorTestSuite (TorsorWrapper 9) (TorsorWrapper 1) (TorsorWrapper 10)
+              , testGroup
+                  "Sum"
+                  [ testGroup "All fields change" $ torsorTestSuite (changes [TorsorChangeSum 5, TorsorChangeProduct 6, TorsorChangeSum2 7]) (Torsor 2 3 4) (Torsor 7 18 11)
+                  , testGroup "One field changes" $ torsorTestSuite (singleChange (TorsorChangeProduct 6)) (Torsor 2 3 4) (Torsor 2 18 4)
+                  , testGroup "No fields change" $ torsorTestSuite (mempty :: Changes TorsorChange) (Torsor 2 3 4) (Torsor 2 3 4)
+                  ]
+              , testGroup "Product" $ torsorTestSuite (TorsorChange2 5 6 7) (Torsor 2 3 4) (Torsor 7 18 11)
+              ]
           ]
       ]
 
@@ -182,3 +193,41 @@ data FooChange2 = FooChange2 Count (Maybe Count) (ListChange ())
 
 instance RightAction FooChange2 Foo where
   actRight = actRightGGeneric
+
+newtype TorsorWrapper = TorsorWrapper (Sum Integer)
+  deriving stock (Generic, Eq, Show)
+
+instance RightAction TorsorWrapper TorsorWrapper where
+  actRight = actRightGGeneric
+
+instance RightTorsor TorsorWrapper TorsorWrapper where
+  differenceRight = differenceRightGGeneric
+
+data Torsor = Torsor (Sum Integer) (Product Rational) (Sum Rational)
+  deriving stock (Generic, Eq, Show)
+
+data TorsorChange = TorsorChangeSum (Sum Integer) | TorsorChangeProduct (Product Rational) | TorsorChangeSum2 (Sum Rational)
+  deriving stock (Generic, Eq, Show)
+
+instance RightAction TorsorChange Torsor where
+  actRight = actRightGGeneric
+
+instance RightTorsor (Changes TorsorChange) Torsor where
+  differenceRight = differenceRightGenericChanges
+
+data TorsorChange2 = TorsorChange2 (Sum Integer) (Product Rational) (Sum Rational)
+  deriving stock (Generic, Eq, Show)
+
+instance RightAction TorsorChange2 Torsor where
+  actRight = actRightGGeneric
+
+instance RightTorsor TorsorChange2 Torsor where
+  differenceRight = differenceRightGGeneric
+
+torsorTestSuite :: forall w s. (RightAction w s, RightTorsor w s, Eq w, Show w, Eq s, Show s) => w -> s -> s -> [TestTree]
+torsorTestSuite w sOrig sActed =
+  [ testCase "act" $ sOrig `actRight` w @?= sActed
+  , testCase "difference" $ sOrig `differenceRight` sActed @?= w
+  , testCase "law 1" $ sOrig `differenceRight` (sOrig `actRight` w :: s) @?= w
+  , testCase "law 2" $ sOrig `actRight` (sOrig `differenceRight` sActed :: w) @?= sActed
+  ]
