@@ -1,5 +1,9 @@
 # Revision history for changeset
 
-## 0.1.0.0 -- YYYY-mm-dd
+## 0.1.1
 
-* First version. Released on an unsuspecting world.
+* Add support for generic deriving
+* Add `RightTorsor` class
+* Add support for `FunctorWithIndex`, `Semialign`, and `Filterable`
+* Default methods for `MonadChangeset`
+* Document `MonadChangeset` laws

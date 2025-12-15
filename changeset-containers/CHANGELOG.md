@@ -1,5 +1,5 @@
 # Revision history for changeset
 
-## 0.1.0.0 -- YYYY-mm-dd
+## 0.1.1
 
-* First version. Released on an unsuspecting world.
+* Add `RestrictKeys` and `WithoutKeys` changes
