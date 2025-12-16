@@ -350,8 +350,18 @@ execChangeset swa s = runIdentity $ execChangesetT swa s
 
 {- | A collection of individual changes.
 
-Often, we only want to define a type for single changes to a state.
-In that case, 'Changes' is handy.
+Often, we only want to define a type for a single change to a state, like:
+
+@
+data Increment = Increment
+instance RightAction Increment Int where
+  actRight n Increment = n + 1
+@
+
+While the definition is succinct, such a type is not automatically a 'Monoid' or 'Semigroup'.
+But these are often needed, e.g. for making 'Changeset' a monad.
+
+In that situation, 'Changes' is handy.
 It serves as a container for changes that don't have a 'Monoid' or 'Semigroup' instance.
 All changes are applied sequentially.
 
