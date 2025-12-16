@@ -4,7 +4,7 @@ module Data.Monoid.RightAction where
 
 -- base
 import Data.Maybe (fromMaybe)
-import Data.Monoid (Dual (..), Endo (..), Last (..))
+import Data.Monoid (Dual (..), Endo (..), Last (..), Product (..), Sum (..))
 import Data.Void (Void)
 import Prelude hiding (zipWith)
 
@@ -68,6 +68,12 @@ instance (RightAction m s) => RightAction (Maybe m) s where
 instance (Semigroup w, RightAction w s, Zip f) => RightAction (f w) (f s) where
   actRight = zipWith actRight
 
+instance (Num a) => RightAction (Sum a) (Sum a) where
+  actRight = (+)
+
+instance (Num a) => RightAction (Product a) (Product a) where
+  actRight = (*)
+
 {- | Endomorphism type with reverse 'Monoid' instance.
 
 The standard 'Endo' type has a left action on @s@ since its composition is defined as @Endo f <> Endo g = Endo (f . g).@
@@ -122,3 +128,9 @@ instance (Eq s) => RightTorsor (Last s) s where
 -- | Calculate the diff per position of the container.
 instance (RightTorsor w s, Zip f) => RightTorsor (f w) (f s) where
   differenceRight = zipWith differenceRight
+
+instance (Num a) => RightTorsor (Sum a) (Sum a) where
+  differenceRight = flip (-)
+
+instance (Fractional a) => RightTorsor (Product a) (Product a) where
+  differenceRight (Product aOld) (Product aNew) = Product $ aNew / aOld
