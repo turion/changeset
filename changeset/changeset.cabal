@@ -47,6 +47,7 @@ common opts
   default-extensions:
     BangPatterns
     DeriveFunctor
+    DeriveGeneric
     DeriveTraversable
     DerivingStrategies
     FlexibleContexts
@@ -74,6 +75,7 @@ library
     Control.Monad.Trans.Changeset
     Data.Monoid.RightAction
     Data.Monoid.RightAction.Coproduct
+    Data.Monoid.RightAction.Generic
 
   build-depends:
     base >=4.12 && <4.22,

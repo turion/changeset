@@ -1,9 +1,11 @@
 module Control.Monad.Changeset.Lens.Setter where
 
 -- base
+import Data.Foldable (Foldable)
 import Data.Function ((&))
 import Data.List (foldl')
 import Data.Monoid (First (..))
+import GHC.Generics (Generic)
 import Prelude hiding (Foldable (..))
 
 -- lens
@@ -34,12 +36,13 @@ data SetterChange s a w = SetterChange
   { setterChangeSetter :: Setter' s a
   , setterChangeChange :: w
   }
-  deriving (Functor)
+  deriving stock (Functor, Foldable, Traversable)
 
 -- | A collection of 'SetterChange's, which are applied consecutively.
 newtype SetterChangeset s a w = SetterChangeset
   {getSetterChangeset :: Seq (SetterChange s a w)}
   deriving newtype (Semigroup, Monoid)
+  deriving stock (Functor, Foldable, Traversable, Generic)
 
 instance (RightAction w a) => RightAction (SetterChangeset s a w) s where
   actRight s SetterChangeset {getSetterChangeset} = foldl' (\s' SetterChange {setterChangeSetter, setterChangeChange} -> s' & setterChangeSetter %~ flip actRight setterChangeChange) s getSetterChangeset
@@ -62,7 +65,7 @@ someLens |>~ Increment
 (|>~) :: (MonadChangeset s (SetterChangeset s a w) m) => Setter' s a -> w -> m ()
 setter |>~ w = change $ setterChangeset setter w
 
-{- | Set a value through a setter..
+{- | Set a value through a setter.
 
 A shorthand for '|>~' in combination with 'First'.
 

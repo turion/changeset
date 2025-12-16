@@ -1,7 +1,13 @@
 module Data.Monoid.RightAction.Sequence where
 
-import Data.Monoid.RightAction (RightAction (..))
+-- base
+import GHC.Generics (Generic)
+
+-- containers
 import Data.Sequence
+
+-- changeset
+import Data.Monoid.RightAction (RightAction (..))
 
 {- | Insert or delete an element at either end of a 'Seq'.
 
@@ -20,7 +26,7 @@ data SeqChange a
     Uncons
   | -- | Drop an element from the right
     Unsnoc
-  deriving (Show, Read, Eq, Ord, Functor)
+  deriving stock (Show, Read, Eq, Ord, Functor, Generic)
 
 instance RightAction (SeqChange a) (Seq a) where
   actRight s (Cons a) = a <| s

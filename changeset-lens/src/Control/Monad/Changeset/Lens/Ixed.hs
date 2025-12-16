@@ -6,6 +6,7 @@ module Control.Monad.Changeset.Lens.Ixed where
 import Data.Foldable (Foldable)
 import Data.Function ((&))
 import Data.Monoid (First (..))
+import GHC.Generics (Generic)
 import Prelude hiding (Foldable (..))
 
 -- lens
@@ -44,6 +45,7 @@ so changes on different indices commute.
 -}
 newtype IxedChangeset s w = IxedChangeset
   {getIxedChangeset :: MonoidalMap (Index s) w}
+  deriving stock (Generic)
 
 deriving instance (Ord (Index s), Semigroup w) => Semigroup (IxedChangeset s w)
 deriving instance (Ord (Index s), Monoid w) => Monoid (IxedChangeset s w)

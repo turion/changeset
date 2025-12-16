@@ -1,5 +1,8 @@
 module Data.Monoid.RightAction.Map where
 
+-- base
+import GHC.Generics (Generic)
+
 -- containers
 import Data.Map
 import Data.Set (Set)
@@ -22,7 +25,7 @@ data MapChange k a
   | Delete k
   | RestrictKeys (Set k)
   | WithoutKeys (Set k)
-  deriving (Show, Read, Eq, Ord, Functor)
+  deriving stock (Show, Read, Eq, Ord, Functor, Generic)
 
 instance (Ord k) => RightAction (MapChange k a) (Map k a) where
   actRight m (Insert k a) = insert k a m

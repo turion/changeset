@@ -36,6 +36,9 @@ common opts
   default-extensions:
     BangPatterns
     DeriveFunctor
+    DeriveGeneric
+    DeriveTraversable
+    DerivingStrategies
     FlexibleInstances
     FunctionalDependencies
     GADTs

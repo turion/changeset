@@ -1,5 +1,8 @@
 module Data.Monoid.RightAction.Set where
 
+-- base
+import GHC.Generics (Generic)
+
 -- containers
 import Data.Set
 
@@ -13,7 +16,7 @@ data SetChange k
   | Intersection (Set k)
   | Union (Set k)
   | Difference (Set k)
-  deriving (Show, Read, Eq, Ord)
+  deriving stock (Show, Read, Eq, Ord, Generic)
 
 instance (Ord k) => RightAction (SetChange k) (Set k) where
   actRight s (Insert k) = insert k s

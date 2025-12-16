@@ -1,5 +1,8 @@
 module Data.Monoid.RightAction.IntSet where
 
+-- base
+import GHC.Generics (Generic)
+
 -- containers
 import Data.IntSet
 
@@ -10,7 +13,7 @@ import Data.Monoid.RightAction (RightAction (..))
 data IntSetChange
   = Insert Int
   | Delete Int
-  deriving (Show, Read, Eq, Ord)
+  deriving stock (Show, Read, Eq, Ord, Generic)
 
 instance RightAction IntSetChange IntSet where
   actRight s (Insert k) = insert k s

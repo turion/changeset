@@ -2,12 +2,24 @@ module Control.Monad.Changeset.Reflex where
 
 -- base
 import Data.Bifunctor (Bifunctor (second))
+import Data.Function ((&))
 import Data.Functor ((<&>))
 import Data.Functor.Compose
 import Data.Functor.Identity (Identity (Identity))
+import Data.List.NonEmpty (NonEmpty, fromList)
+import GHC.Generics (Generic)
 
 -- monoid-extras
 import Data.Monoid.Action
+
+-- containers
+
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IM
+import Data.Map (Map)
+
+-- some
+import Data.GADT.Compare (GCompare)
 
 -- reflex
 import Reflex.Class
@@ -19,21 +31,16 @@ import Data.Dependent.Map (
   insert,
   traverseWithKey,
  )
+import Data.Functor.Misc (dmapToIntMap, dmapToMap, intMapWithFunctorToDMap, mapWithFunctorToDMap)
 
 -- changeset
 import Control.Monad.Trans.Changeset (ChangesetT (..))
-import Data.Function ((&))
-import Data.Functor.Misc (dmapToIntMap, dmapToMap, intMapWithFunctorToDMap, mapWithFunctorToDMap)
-import Data.GADT.Compare (GCompare)
-import Data.IntMap (IntMap)
-import qualified Data.IntMap as IM
-import Data.List.NonEmpty (NonEmpty, fromList)
-import Data.Map (Map)
 
 -- | A change to a dependent map 'DMap'.
 data DMapChange k f v
   = Insert (k v) (f v)
   | Delete (k v)
+  deriving stock (Functor, Foldable, Traversable, Generic)
 
 instance (GCompare k) => Action (DMapChange k f v) (DMap k f) where
   act (Insert k v) = insert k v
