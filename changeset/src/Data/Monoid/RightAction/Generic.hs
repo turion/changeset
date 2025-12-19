@@ -257,3 +257,7 @@ Whenever it typechecks, it will be the inverse to the automatically derived inst
 -}
 differenceRightGenericChanges :: (Generic w, Generic s, GCRightTorsor (Rep w) (Rep s)) => s -> s -> Changes w
 differenceRightGenericChanges sOld sNew = to <$> gcDifferenceRight (from sOld) (from sNew)
+
+data SumChange s w
+  = ChangeIn
+-- Um RightTorsor (SumChange s w) s zu beweisen, muss ich w wieder in einzelne Typen analysieren. Das wäre alles wohl einfacher mit sop.

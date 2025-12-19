@@ -110,7 +110,7 @@ In group theory, this concept is called a [torsor](https://en.wikipedia.org/wiki
 See also [monoid-extras' @Torsor@](https://hackage-content.haskell.org/package/monoid-extras/docs/Data-Monoid-Action.html#t:Torsor) for the same concept,
 but for left actions.
 -}
-class RightTorsor m s where
+class RightAction m s => RightTorsor m s where
   differenceRight ::
     -- | The original state
     s ->
@@ -126,7 +126,7 @@ instance (Eq s) => RightTorsor (Last s) s where
   differenceRight sOrig sActed = Last $ if sOrig == sActed then Nothing else Just sActed
 
 -- | Calculate the diff per position of the container.
-instance (RightTorsor w s, Zip f) => RightTorsor (f w) (f s) where
+instance (Semigroup w, RightTorsor w s, Zip f) => RightTorsor (f w) (f s) where
   differenceRight = zipWith differenceRight
 
 instance {-# OVERLAPPING #-} (Num a) => RightTorsor (Sum a) (Sum a) where
