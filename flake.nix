@@ -26,6 +26,7 @@
         changeset-containers = ./changeset-containers;
         changeset-lens = ./changeset-lens;
         changeset-reflex = ./changeset-reflex;
+        changeset-time = ./changeset-time;
       };
 
       # Always keep in sync with the tested-with section in the cabal file
@@ -49,15 +50,17 @@
             composeManyExtensions [
               (hfinal: hprev: {
                 reflex = dontCheck (doJailbreak hprev.reflex);
+                time = hprev.time_1_15;
               })
             ];
+
+          haskellPackagesVanilla =             (genAttrs supportedGhcs (ghc: pkgs.haskell.packages.${ghc})
+            // { default = pkgs.haskellPackages; });
 
           haskellPackagesFor = mapAttrs
             (ghcVersion: haskellPackages: haskellPackages.override (_: {
               overrides = dependenciesOverrides;
-            }))
-            (genAttrs supportedGhcs (ghc: pkgs.haskell.packages.${ghc})
-            // { default = pkgs.haskellPackages; });
+            })) haskellPackagesVanilla;
 
           # Haskell package overrides to set the definitions of the locally defined packages to the current version in this repo
           localPackagesOverrides = hfinal: hprev: with pkgs.haskell.lib;
@@ -98,7 +101,8 @@
               packages = hps: attrValues (localPackagesFor (haskellPackagesExtended.${ghcVersion}));
               nativeBuildInputs = (
                 lib.optional (versionAtLeast haskellPackages.ghc.version "9.6")
-                  haskellPackages.haskell-language-server)
+                  # Has dependency on haskellPackages.time which we don't want to override
+                  haskellPackagesVanilla.${ghcVersion}.haskell-language-server)
               ++ (with pkgs;
                 [ cabal-install ]
               )
