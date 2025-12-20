@@ -673,7 +673,7 @@ instance (Semialign f, Filterable f, RightAction w s) => RightAction (AlignChang
         (SetAlignPosition s) -> Just s
         _ -> Nothing
 
-instance (Semialign f, RightTorsor w s) => RightTorsor (AlignChanges f w s) (f s) where
+instance (Semialign f, Filterable f, RightTorsor w s) => RightTorsor (AlignChanges f w s) (f s) where
   differenceRight = ((AlignChanges .) .) $ alignWith $ these (const DeleteAlignPosition) SetAlignPosition $ (ChangeAlignPosition .) . differenceRight
 
 -- ** Changing 'FunctorWithIndex'
