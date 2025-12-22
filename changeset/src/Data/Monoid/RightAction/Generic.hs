@@ -1,3 +1,9 @@
+{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableSuperClasses #-}
+
 module Data.Monoid.RightAction.Generic where
 
 -- base
@@ -5,9 +11,86 @@ import Control.Monad (guard)
 import GHC.Generics (Generic (..), K1 (..), M1 (..), Rec1 (..), (:*:) (..), (:+:) (..))
 import Prelude hiding (zipWith)
 
+-- generics-sop
+import Generics.SOP (All, All2, AllZip, AllZip2, HExpand (..), HSequence (..), HTrans (..), HTraverse_ (..), NP (..), NS (..), SListI, SListI2, SOP (..), hmap, hzipWith, unSOP, unZ)
+
 -- changeset
+
+import Control.Monad.State.Strict (execState, modify)
 import Control.Monad.Trans.Changeset (Changes, singleChange)
+import Data.Monoid (Endo (..))
 import Data.Monoid.RightAction
+import Data.Proxy (Proxy (..))
+import Generics.SOP.BasicFunctors
+import Generics.SOP.Constraint (Head)
+import Generics.SOP.GGP (GCode, GFrom, GTo, gfrom, gto)
+
+class (RightAction w s) => FlipRightAction s w where
+  flipActRight :: w -> s -> s
+
+instance (RightAction w s) => FlipRightAction s w where
+  flipActRight = flip actRight
+
+actRightSOP :: forall w s. (GFrom w, Generic w, All2 (FlipRightAction s) (GCode w)) => s -> w -> s
+actRightSOP s = flip execState s . hctraverse_ (Proxy @(FlipRightAction s)) (\(I w) -> modify (flipActRight w)) . gfrom
+
+-- actRightSOPSOP :: forall ws ss . (GFrom ws, Generic ws, GFrom ss, GTo ss, Generic ss, AllZip2 RightAction (GCode ws) (GCode ss)) => ss -> ws -> ss
+-- actRightSOPSOP ss ws = gto $ _
+
+actRightSOPProduct :: forall ws ss. (GFrom ws, Generic ws, GFrom ss, GTo ss, Generic ss, GCode ss ~ '[Head (GCode ss)], AllZip ProductAction (GCode ws) (Head (GCode ss))) => ss -> ws -> ss
+actRightSOPProduct ss ws = gto $ SOP $ Z $ hzipWith (\(I s) (Endo f) -> I (f s)) (unZ $ unSOP $ gfrom ss) (hexpand mempty (toEndos ws))
+
+toEndos :: forall ws ss. (GFrom ws, Generic ws, (AllZip ProductAction (GCode ws) ss)) => ws -> NS Endo ss
+toEndos = toEndos' . unSOP . gfrom
+
+class (All (FlipRightAction s) wss) => ProductAction wss s
+instance (All (FlipRightAction s) wss) => ProductAction wss s
+
+toEndos' :: forall wss ss. (AllZip ProductAction wss ss) => NS (NP I) wss -> NS Endo ss
+toEndos' = htrans (Proxy @ProductAction) toEndo
+
+toEndo :: forall ws s. (All (FlipRightAction s) ws) => NP I ws -> Endo s
+toEndo = Endo . execState . hctraverse_ (Proxy @(FlipRightAction s)) (\(I w) -> modify $ flipActRight w)
+
+-- FIXME misnomer
+actRightSOPSum :: forall wss ss. (GFrom wss, Generic wss, GFrom ss, GTo ss, Generic ss, AllZip2 RightAction (GCode wss) (GCode ss), SListI2 (GCode ss)) => ss -> wss -> ss
+actRightSOPSum ss wss = gto $ hzipWith (\(Endo f) -> fmap f) (hexpand mempty $ htrans (Proxy @RightAction) (Endo . flipActRight . unI) $ gfrom wss) $ gfrom ss
+
+data SumChange s w = SummandChange w | Switch s
+  deriving (Eq, Show, Ord, Read)
+
+instance (RightAction w s) => RightAction (SumChange s w) s where
+  actRight s (SummandChange w) = actRight s w
+  actRight _ (Switch s) = s
+
+class RightTorsorTwo s w where
+  rightTorsorTwo :: Two s -> w
+
+instance (RightTorsor w s) => RightTorsorTwo s w where
+  rightTorsorTwo (Two sOrig sChanged) = differenceRight sOrig sChanged
+
+class RightTorsorDifferenceNP ss ws where
+  rightTorsorDifferenceNP :: Difference ss -> NP I ws
+
+instance (AllZip RightTorsorTwo ss ws) => RightTorsorDifferenceNP ss ws where
+  rightTorsorDifferenceNP (Difference ssPairs) = htrans (Proxy @RightTorsorTwo) (I . rightTorsorTwo) ssPairs
+
+differenceRightSOPSum :: forall wss ss. (GFrom wss, Generic wss, GFrom ss, GTo wss, Generic ss, AllZip RightTorsorDifferenceNP (GCode ss) (GCode wss), AllZip2 RightAction (GCode wss) (GCode ss), AllZip2 RightAction (GCode ss) (GCode wss), SListI2 (GCode ss)) => ss -> ss -> SumChange ss wss
+differenceRightSOPSum ssOrig ssChanged = either Switch (SummandChange . gto . SOP . htrans (Proxy @RightTorsorDifferenceNP) rightTorsorDifferenceNP) $ hctraverse' (Proxy @SListI) (sumChangeSOP ssChanged) $ hzipWith differenceSummand (hexpand WrongSummand $ hmap RightSummand $ unSOP $ gfrom ssOrig) (unSOP $ gfrom ssChanged)
+
+data DifferenceSummand ss = WrongSummand | RightSummand (NP I ss)
+data SumChangeSOP ss = SummandSwitch | SummandDifference (NP I ss) (NP I ss)
+newtype Difference ss = Difference (NP Two ss)
+data Two s = Two s s
+differenceSummand :: DifferenceSummand ss -> NP I ss -> SumChangeSOP ss
+differenceSummand = \case
+  WrongSummand -> const SummandSwitch
+  RightSummand ss -> SummandDifference ss
+
+sumChangeSOP :: (SListI ss) => s -> SumChangeSOP ss -> Either s (Difference ss)
+sumChangeSOP s = \case
+  SummandSwitch -> Left s
+  SummandDifference ssOrig ssChanged -> Right $ Difference $ hzipWith (\(I sOrig) (I sChanged) -> Two sOrig sChanged) ssOrig ssChanged
 
 {- | A class to define generic instances of 'RightAction'. You will rarely need it directly.
 

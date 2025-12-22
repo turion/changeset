@@ -113,7 +113,7 @@ and these can depend on the current state.
 
 The type @w@ encodes /changes/ (or updates, edits, commits, diffs, patches ...) to the state @s.@
 This relation is captured by the 'RightAction' type class from @monoid-extras.@
-It contains a method, @'act' :: w -> s -> s@,
+It contains a method, @'actRight' :: w -> s -> s@,
 which implements the semantics of @w@ as the type of updates to @s.@
 
 The standard example is that of a big record where we only want to change a small portion:
@@ -140,7 +140,7 @@ data ChangeAddress
   | Delete Text
 
 instance RightAction ChangeAddress User where
-  act = ...
+  actRight = ...
 @
 
 Now we can conveniently work in the monad @'ChangesetT' User [ChangeAddress] m.@
@@ -673,7 +673,7 @@ instance (Semialign f, Filterable f, RightAction w s) => RightAction (AlignChang
         (SetAlignPosition s) -> Just s
         _ -> Nothing
 
-instance (Semialign f, RightTorsor w s) => RightTorsor (AlignChanges f w s) (f s) where
+instance (Semialign f, Filterable f, RightTorsor w s) => RightTorsor (AlignChanges f w s) (f s) where
   differenceRight = ((AlignChanges .) .) $ alignWith $ these (const DeleteAlignPosition) SetAlignPosition $ (ChangeAlignPosition .) . differenceRight
 
 -- ** Changing 'FunctorWithIndex'
