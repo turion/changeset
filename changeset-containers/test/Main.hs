@@ -7,11 +7,11 @@ import Prelude hiding (Foldable (..))
 import Test.Tasty
 
 -- changeset-containers-test
-import qualified IntMap
-import qualified IntSet
-import qualified Map
-import qualified Sequence
-import qualified Set
+import IntMap qualified
+import IntSet qualified
+import Map qualified
+import Sequence qualified
+import Set qualified
 
 main :: IO ()
 main =

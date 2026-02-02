@@ -38,17 +38,25 @@ common opts
     BangPatterns
     DeriveFunctor
     DeriveGeneric
+    DeriveTraversable
     DerivingStrategies
+    FlexibleContexts
     FlexibleInstances
     FunctionalDependencies
     GADTs
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
     KindSignatures
+    LambdaCase
     MultiParamTypeClasses
     NamedFieldPuns
+    QuantifiedConstraints
     RankNTypes
     ScopedTypeVariables
+    StandaloneDeriving
     StrictData
     TupleSections
+    TypeApplications
     TypeOperators
 
 library
@@ -64,7 +72,9 @@ library
     base >=4.16 && <4.23,
     changeset ==0.1.1,
     containers >=0.6 && <0.8,
+    indexed-traversable ^>=0.1,
     monoid-extras ^>=0.7,
+    transformers >=0.5.6.2 && <0.7,
 
   hs-source-dirs: src
   default-language: Haskell2010
@@ -80,6 +90,8 @@ test-suite changeset-containers-test
     changeset,
     changeset-containers,
     containers,
+    data-default,
+    falsify ^>=0.2.0,
     monoid-extras,
     tasty >=1.4.2 && <1.6,
     tasty-hunit ^>=0.10.2,
