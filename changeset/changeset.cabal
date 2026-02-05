@@ -18,10 +18,6 @@ category: Control
 build-type: Simple
 extra-doc-files: CHANGELOG.md
 tested-with:
-  ghc ==8.6
-  ghc ==8.8
-  ghc ==8.10
-  ghc ==9.0
   ghc ==9.2
   ghc ==9.4
   ghc ==9.6
@@ -78,7 +74,7 @@ library
     Data.Monoid.RightAction.Generic
 
   build-depends:
-    base >=4.12 && <4.22,
+    base >=4.16 && <4.22,
     containers >=0.6 && <0.8,
     indexed-traversable ^>=0.1,
     mmorph >=1.1 && <1.3,

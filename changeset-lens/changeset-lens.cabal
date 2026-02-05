@@ -64,7 +64,7 @@ library
     Control.Monad.Changeset.Lens.Setter
 
   build-depends:
-    base >=4.12 && <4.22,
+    base >=4.16 && <4.22,
     changeset ==0.1.1,
     containers >=0.6 && <0.8,
     indexed-traversable ^>=0.1.1,
