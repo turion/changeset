@@ -2,7 +2,6 @@ module Data.Monoid.RightAction.Coproduct where
 
 -- base
 import Data.Foldable (Foldable (foldl'), toList)
-import Data.Typeable (Typeable)
 import Prelude hiding (Foldable (..))
 
 -- containers
@@ -21,7 +20,7 @@ Therefore it's not advised to inspect the contents of a coproduct.
 You should usually want to use 'normaliseCoproduct'.
 -}
 newtype (:+:) m n = Coproduct {getCoproduct :: Seq (Either m n)}
-  deriving (Typeable, Semigroup, Monoid)
+  deriving newtype (Semigroup, Monoid)
 
 {- | Construct a coproduct value from the left constituent monoid.
 
