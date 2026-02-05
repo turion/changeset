@@ -416,6 +416,9 @@ instance {-# OVERLAPPABLE #-} (RightTorsor w s) => RightTorsor (Changes w) s whe
 {- | A list can be changed by prepending an element, or removing one.
 
 To change an element of a list, see the indexed changes from [@changeset-lens@](hackage.haskell.org/package/changeset-lens).
+
+To change 'Seq'uences (from @containers@) efficiently and compute the minimum edit,
+see 'Data.Monoid.RightAction.Sequence.SeqEdit'.
 -}
 data ListChange a
   = -- | Prepend an element
