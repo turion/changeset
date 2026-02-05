@@ -57,7 +57,7 @@ library
     Control.Monad.Changeset.Reflex
 
   build-depends:
-    base >=4.16 && <4.22,
+    base >=4.16 && <4.23,
     changeset ==0.1.1,
     containers >=0.6 && <0.8,
     dependent-map ^>=0.4,

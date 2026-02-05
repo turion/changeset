@@ -61,7 +61,7 @@ library
     Data.Monoid.RightAction.Set
 
   build-depends:
-    base >=4.16 && <4.22,
+    base >=4.16 && <4.23,
     changeset ==0.1.1,
     containers >=0.6 && <0.8,
     monoid-extras ^>=0.7,

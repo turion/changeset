@@ -23,6 +23,7 @@ tested-with:
   ghc ==9.6
   ghc ==9.8
   ghc ==9.10
+  ghc ==9.12
 
 source-repository head
   type: git
@@ -74,7 +75,7 @@ library
     Data.Monoid.RightAction.Generic
 
   build-depends:
-    base >=4.16 && <4.22,
+    base >=4.16 && <4.23,
     containers >=0.6 && <0.8,
     indexed-traversable ^>=0.1,
     mmorph >=1.1 && <1.3,
