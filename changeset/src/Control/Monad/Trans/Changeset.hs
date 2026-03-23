@@ -428,6 +428,9 @@ This change unconditionally overwrites the old value.
 newtype SetTo a = SetTo a
   deriving stock (Eq, Show, Read, Ord, Generic, Functor, Foldable, Traversable)
 
+instance Semigroup (SetTo a) where
+  _ <> a = a
+
 instance RightAction (SetTo a) a where
   actRight _ (SetTo a) = a
 

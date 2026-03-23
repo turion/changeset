@@ -52,5 +52,11 @@ normaliseCoproduct = normaliseCoproduct' . toList . getCoproduct
 instance (Eq m, Eq n, Semigroup m, Semigroup n) => Eq (m :+: n) where
   mns1 == mns2 = normaliseCoproduct mns1 == normaliseCoproduct mns2
 
+-- | Coproducts are shown after normalising
+instance (Show m, Show n, Semigroup m, Semigroup n) => Show (m :+: n) where
+  showsPrec d mns =
+    showParen (d > 10) $
+      showString "Coproduct " . showsPrec 11 (normaliseCoproduct mns)
+
 instance (RightAction m s, RightAction n s) => RightAction (m :+: n) s where
   actRight s mns = foldl' (flip $ either (flip actRight) (flip actRight)) s (getCoproduct mns)
