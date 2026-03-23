@@ -24,7 +24,7 @@ Two laws for these methods boil down to the requirement that 'change' and 'curre
   current = changeset (, mempty)
 @
 
-The central law ensures that future  states are affected by the past changes through right action:
+The central law ensures that future states are affected by the past changes through right action:
 
 @
 forall MonadChangeset s w m
@@ -54,17 +54,19 @@ class (Monad m, Monoid w, RightAction w s) => MonadChangeset s w m | m -> s, m -
     (s -> (a, w)) ->
     m a
 
-  -- | Apply a change to the state.
-  --
-  --   The 'Action' instance is used to mutate the state.
-  --
-  --   This is a special case of 'changeset' where the current state is disregarded.
+  {- | Apply a change to the state.
+
+  The 'RightAction' instance is used to mutate the state.
+
+  This is a special case of 'changeset' where the current state is disregarded.
+  -}
   change :: w -> m ()
   change w = changeset $ const ((), w)
 
-  -- | Observe the current state.
-  --
-  --   This is a special case of 'changeset' where the state is not changed.
+  {- | Observe the current state.
+
+  This is a special case of 'changeset' where the state is not changed.
+  -}
   current :: m s
   current = changeset (,mempty)
 
