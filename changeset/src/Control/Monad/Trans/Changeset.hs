@@ -411,6 +411,21 @@ instance {-# OVERLAPPABLE #-} (RightTorsor w s) => RightTorsor (Changes w) s whe
 
 -- * Change examples
 
+-- ** Setting any value
+
+{- | Change a value by setting it to a new value.
+
+This change unconditionally overwrites the old value.
+-}
+newtype SetTo a = SetTo a
+  deriving stock (Eq, Show, Read, Ord, Generic, Functor, Foldable, Traversable)
+
+instance RightAction (SetTo a) a where
+  actRight _ (SetTo a) = a
+
+instance RightTorsor (SetTo a) a where
+  differenceRight _ = SetTo
+
 -- ** Changing lists
 
 {- | A list can be changed by prepending an element, or removing one.
