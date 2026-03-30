@@ -46,7 +46,7 @@ main =
                       let action = flip evalChangeset 0 $ do
                             n <- current
                             changeSingle Increment
-                            return n
+                            pure n
                        in action @?= (0 :: Int)
                   ]
               , testGroup
@@ -81,6 +81,33 @@ main =
                     env <- ask
                     replicateM_ env $ changeSingle Increment
                in action @?= 100
+          ]
+      , testGroup
+          "diff and update"
+          [ testGroup
+              "diff"
+              [ testCase "diff yields differenceRight from current" $
+                  evalChangeset @(Changes TorsorChange) @Torsor (diff (Torsor 7 18 11)) (Torsor 2 3 4)
+                    @?= differenceRight (Torsor 2 3 4) (Torsor 7 18 11)
+              , testCase "diff self is mempty" $
+                  evalChangeset @(Changes TorsorChange) @Torsor (diff (Torsor 2 3 4)) (Torsor 2 3 4)
+                    @?= mempty
+              ]
+          , testGroup
+              "update"
+              [ testCase "update sets the state" $
+                  execChangeset @(Changes TorsorChange) @Torsor (update (Torsor 7 18 11)) (Torsor 2 3 4)
+                    @?= Torsor 7 18 11
+              , testCase "update then current yields the target" $
+                  evalChangeset @(Changes TorsorChange) @Torsor (update (Torsor 7 18 11) >> current) (Torsor 2 3 4)
+                    @?= Torsor 7 18 11
+              , testCase "update to self is a no-op" $
+                  execChangeset @(Changes TorsorChange) @Torsor (update (Torsor 2 3 4)) (Torsor 2 3 4)
+                    @?= Torsor 2 3 4
+              , testCase "diff after update is mempty" $
+                  evalChangeset @(Changes TorsorChange) @Torsor (update (Torsor 7 18 11) >> diff (Torsor 7 18 11)) (Torsor 2 3 4)
+                    @?= mempty
+              ]
           ]
       , testGroup
           "Coproduct"

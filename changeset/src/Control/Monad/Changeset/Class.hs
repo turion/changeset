@@ -77,8 +77,16 @@ instance {-# OVERLAPPABLE #-} (Monad m, Monad (t m), MonadTrans t, MFunctor t, M
 
 {- | Calculate the difference from the current state to the explicitly given state, and return it.
 
-With a lawful @'RightTorsor' w s@ instance, it can be expected that after then applying the difference, the state is the explicitly given one:
-After @diff s >>= change@, the current state is @s@.
+Also see 'update'.
 -}
 diff :: (RightTorsor w s, MonadChangeset s w m) => s -> m w
 diff s = (`differenceRight` s) <$> current
+
+{- | Update to a specific state.
+
+This is only possible if the change is also a /torsor/, that is, there is a way to calculate a change as a difference between states.
+
+With a lawful @'RightTorsor' w s@ instance, it can be expected that after applying @'update' s@, the state is @s@.
+-}
+update :: (MonadChangeset s w m, RightTorsor w s) => s -> m ()
+update s = diff s >>= change
