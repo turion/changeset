@@ -25,7 +25,7 @@ import Control.Monad.Changeset.Class
 import Control.Monad.Trans.Changeset
 import Data.Monoid.RightAction (RightAction (..), RightTorsor (..), rEndo, set)
 import Data.Monoid.RightAction.Coproduct (inL, (:+:))
-import Data.Monoid.RightAction.Generic (actRightGGeneric, actRightGeneric, differenceRightGGeneric, differenceRightGenericChanges)
+import Data.Monoid.RightAction.Generic (SumChange (..), actRightSOP, actRightSOPProduct, actRightSOPSum, differenceRightGGeneric, differenceRightGenericChanges, differenceRightSOPSum)
 
 type M = Changeset Int (Changes Count)
 
@@ -158,6 +158,11 @@ main =
                   ]
               , testGroup "Product" $ torsorTestSuite (TorsorChange2 5 6 7) (Torsor 2 3 4) (Torsor 7 18 11)
               ]
+          , testGroup
+              "SumTorsor"
+              [ testGroup "SummandChange" $ torsorTestSuite (SummandChange (SumTorsorChangeInteger 3) :: SumChange SumTorsor SumTorsorChange) (SumTorsorInteger 1) (SumTorsorInteger 4)
+              , testGroup "Switch" $ torsorTestSuite (Switch (SumTorsorRational 2 3) :: SumChange SumTorsor SumTorsorChange) (SumTorsorInteger 1) (SumTorsorRational 2 3)
+              ]
           ]
       ]
 
@@ -168,7 +173,7 @@ data IntAction
   deriving stock (Generic)
 
 instance RightAction IntAction Int where
-  actRight = actRightGeneric
+  actRight = actRightSOP
 
 newtype Bar = Bar Int
   deriving stock (Generic, Eq, Show)
@@ -177,7 +182,7 @@ newtype BarChange = BarChange Count
   deriving stock (Generic)
 
 instance RightAction BarChange Bar where
-  actRight = actRightGGeneric
+  actRight = actRightSOPProduct
 
 data Foo = Foo Int Int [()]
   deriving stock (Generic, Eq, Show)
@@ -186,19 +191,19 @@ data FooChange = FooChangeInt Count | FooChangeInt2 Count | FooChangeList (ListC
   deriving stock (Generic)
 
 instance RightAction FooChange Foo where
-  actRight = actRightGGeneric
+  actRight = actRightSOPProduct
 
 data FooChange2 = FooChange2 Count (Maybe Count) (ListChange ())
   deriving stock (Generic)
 
 instance RightAction FooChange2 Foo where
-  actRight = actRightGGeneric
+  actRight = actRightSOPSum
 
 newtype TorsorWrapper = TorsorWrapper (Sum Integer)
   deriving stock (Generic, Eq, Show)
 
 instance RightAction TorsorWrapper TorsorWrapper where
-  actRight = actRightGGeneric
+  actRight = actRightSOPSum
 
 instance RightTorsor TorsorWrapper TorsorWrapper where
   differenceRight = differenceRightGGeneric
@@ -210,7 +215,7 @@ data TorsorChange = TorsorChangeSum (Sum Integer) | TorsorChangeProduct (Product
   deriving stock (Generic, Eq, Show)
 
 instance RightAction TorsorChange Torsor where
-  actRight = actRightGGeneric
+  actRight = actRightSOPProduct
 
 instance RightTorsor (Changes TorsorChange) Torsor where
   differenceRight = differenceRightGenericChanges
@@ -219,10 +224,22 @@ data TorsorChange2 = TorsorChange2 (Sum Integer) (Product Rational) (Sum Rationa
   deriving stock (Generic, Eq, Show)
 
 instance RightAction TorsorChange2 Torsor where
-  actRight = actRightGGeneric
+  actRight = actRightSOPSum
 
 instance RightTorsor TorsorChange2 Torsor where
   differenceRight = differenceRightGGeneric
+
+data SumTorsor = SumTorsorInteger (Sum Integer) | SumTorsorRational (Product Rational) (Sum Rational)
+  deriving stock (Generic, Eq, Show)
+
+data SumTorsorChange = SumTorsorChangeInteger (Sum Integer) | SumTorsorChangeRational (Product Rational) (Sum Rational)
+  deriving stock (Generic, Eq, Show)
+
+instance RightAction SumTorsorChange SumTorsor where
+  actRight = actRightSOPSum
+
+instance RightTorsor (SumChange SumTorsor SumTorsorChange) SumTorsor where
+  differenceRight = differenceRightSOPSum
 
 torsorTestSuite :: forall w s. (RightAction w s, RightTorsor w s, Eq w, Show w, Eq s, Show s) => w -> s -> s -> [TestTree]
 torsorTestSuite w sOrig sActed =
