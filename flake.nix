@@ -100,8 +100,17 @@
               nativeBuildInputs = (
                 lib.optional (versionAtLeast haskellPackages.ghc.version "9.6")
                   haskellPackages.haskell-language-server)
-              ++ (with pkgs;
-                [ cabal-install ]
+              ++
+              [
+                (pkgs.writeShellScriptBin "hlint" ''
+                  # There was a weird error, this is what Claude suggested to fix it, and it seems to work fine
+                  unset NIX_GHC_LIBDIR
+                  exec ${haskellPackages.hlint}/bin/hlint "$@"
+                '')
+              ]
+              ++
+              (with pkgs;
+              [ cabal-install ]
               )
               ;
             })

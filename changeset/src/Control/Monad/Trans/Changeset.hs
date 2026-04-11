@@ -31,19 +31,27 @@ data ChangeAddress
 @
 
 Changes for such a type (or rather, for the monoid @'Changes' ChangeAddress@) can be inspected.
+This then opens several possibilities:
+
+* We can display and edit the planned changes
+* We can perform side effects dependent on the particular change that can be made,
+  for example redrawing a corresponding UI element or performing a DB query
+* We can calculate changes as a diff between states and merge diffs
 
 'ChangesetT' is a very general state monad transformer.
 It has all the standard state monads from @transformers@ as special cases:
 
-+--------------------------+---------------+-------------+---------------------------------------------+
-| Transformer special case | State type    | Monoid type | Intuition                                   |
-+==========================+===============+=============+=============================================+
-| @'WriterT' w@            | '()'          | @w@         | No possibility to observe the current state |
-+--------------------------+---------------+-------------+---------------------------------------------+
-| @'AccumT' w@             | @'Regular' w@ | @w@         | The state is the same type as the changes   |
-+--------------------------+---------------+-------------+---------------------------------------------+
-| @'StateT' s@             | @s@           | @First s@   | The change overwrites all previous changes  |
-+--------------------------+---------------+-------------+---------------------------------------------+
++--------------------------+---------------+-------------------------+---------------------------------------------+
+| Transformer special case | State type    | Change type             | Intuition                                   |
++==========================+===============+=========================+=============================================+
+| @'WriterT' w@            | '()'          | @w@                     | No possibility to observe the current state |
++--------------------------+---------------+-------------------------+---------------------------------------------+
+| @'AccumT' w@             | @'Regular' w@ | @w@                     | The state is the same type as the changes   |
++--------------------------+---------------+-------------------------+---------------------------------------------+
+| @'StateT' s@             | @s@           | @'Data.Monoid.Last' s@  | The change overwrites all previous changes  |
++--------------------------+---------------+-------------------------+---------------------------------------------+
+| @'ReaderT' r@            | @r@           | '()'                    | The state cannot be changed                 |
++--------------------------+---------------+-------------------------+---------------------------------------------+
 
 The @changeset@ ecosystem has support for standard @containers@ and optics from @lens@
 by providing the packages [@changeset-containers@](https://hackage.haskell.org/package/changeset-containers) and [@changeset-lens@](https://hackage.haskell.org/package/changeset-lens).
@@ -112,11 +120,11 @@ An @a@ is computed while performing a side effect in @m@,
 and these can depend on the current state.
 
 The type @w@ encodes /changes/ (or updates, edits, commits, diffs, patches ...) to the state @s.@
-This relation is captured by the 'RightAction' type class from @monoid-extras.@
-It contains a method, @'actRight' :: w -> s -> s@,
+This relation is captured by the 'RightAction' type class from "Data.Monoid.RightAction".
+It contains a method, @'actRight' :: s -> w -> s@,
 which implements the semantics of @w@ as the type of updates to @s.@
 
-The standard example is that of a big record where we only want to change a small portion:
+A standard example is that of a big record where we only want to change a small portion:
 
 @
 data User = User
@@ -276,7 +284,7 @@ instance (RightAction w s, Monoid w, Monad m) => Monad (ChangesetT s w m) where
     (w1, a) <- ma s
     let !s' = actRight s w1
     (w2, b) <- getChangesetT (f a) s'
-    return (w1 <> w2, b)
+    pure (w1 <> w2, b)
 
 instance (Alternative m, Monoid w, RightAction w s, Monad m) => Alternative (ChangesetT s w m) where
   empty = liftF empty
@@ -420,6 +428,9 @@ This change unconditionally overwrites the old value.
 newtype SetTo a = SetTo a
   deriving stock (Eq, Show, Read, Ord, Generic, Functor, Foldable, Traversable)
 
+instance Semigroup (SetTo a) where
+  _ <> a = a
+
 instance RightAction (SetTo a) a where
   actRight _ (SetTo a) = a
 
@@ -465,6 +476,10 @@ newtype MaybeChange a = MaybeChange {getMaybeChange :: Last (Maybe a)}
 instance RightAction (MaybeChange a) (Maybe a) where
   actRight aMaybe MaybeChange {getMaybeChange} = actRight aMaybe getMaybeChange
 
+{- | __Warning:__ This instance does not satisfy the 'RightTorsor' law @differenceRight s (s \`actRight\` w) = w@.
+When @w@ sets the value to the same state (e.g. @'setJust' x@ applied to @'Just' x@),
+the round-trip produces 'mempty' instead of the original @w@.
+-}
 instance (Eq a) => RightTorsor (MaybeChange a) (Maybe a) where
   differenceRight Nothing Nothing = mempty
   differenceRight (Just aOrig) (Just aChanged) = if aOrig == aChanged then mempty else setJust aChanged

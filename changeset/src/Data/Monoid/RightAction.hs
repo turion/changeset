@@ -121,7 +121,12 @@ class (RightAction m s) => RightTorsor m s where
 instance RightTorsor () s where
   differenceRight _ _ = ()
 
--- | When the new state is equal to the original, produce the empty change, otherwise just 'set' to the new state.
+{- | When the new state is equal to the original, produce the empty change, otherwise just 'set' to the new state.
+
+__Warning:__ This instance does not satisfy the 'RightTorsor' law @differenceRight s (s \`actRight\` w) = w@.
+When @w@ sets the value to the same state (e.g. @'Last' ('Just' x)@ applied to @x@),
+the round-trip produces 'mempty' instead of the original @w@.
+-}
 instance (Eq s) => RightTorsor (Last s) s where
   differenceRight sOrig sActed = Last $ if sOrig == sActed then Nothing else Just sActed
 

@@ -24,7 +24,7 @@ Two laws for these methods boil down to the requirement that 'change' and 'curre
   current = changeset (, mempty)
 @
 
-The central law ensures that future  states are affected by the past changes through right action:
+The central law ensures that future states are affected by the past changes through right action:
 
 @
 forall MonadChangeset s w m
@@ -54,17 +54,19 @@ class (Monad m, Monoid w, RightAction w s) => MonadChangeset s w m | m -> s, m -
     (s -> (a, w)) ->
     m a
 
-  -- | Apply a change to the state.
-  --
-  --   The 'Action' instance is used to mutate the state.
-  --
-  --   This is a special case of 'changeset' where the current state is disregarded.
+  {- | Apply a change to the state.
+
+  The 'RightAction' instance is used to mutate the state.
+
+  This is a special case of 'changeset' where the current state is disregarded.
+  -}
   change :: w -> m ()
   change w = changeset $ const ((), w)
 
-  -- | Observe the current state.
-  --
-  --   This is a special case of 'changeset' where the state is not changed.
+  {- | Observe the current state.
+
+  This is a special case of 'changeset' where the state is not changed.
+  -}
   current :: m s
   current = changeset (,mempty)
 
@@ -75,8 +77,16 @@ instance {-# OVERLAPPABLE #-} (Monad m, Monad (t m), MonadTrans t, MFunctor t, M
 
 {- | Calculate the difference from the current state to the explicitly given state, and return it.
 
-With a lawful @'RightTorsor' w s@ instance, it can be expected that after then applying the difference, the state is the explicitly given one:
-After @diff s >>= change@, the current state is @s@.
+Also see 'update'.
 -}
 diff :: (RightTorsor w s, MonadChangeset s w m) => s -> m w
 diff s = (`differenceRight` s) <$> current
+
+{- | Update to a specific state.
+
+This is only possible if the change is also a /torsor/, that is, there is a way to calculate a change as a difference between states.
+
+With a lawful @'RightTorsor' w s@ instance, it can be expected that after applying @'update' s@, the state is @s@.
+-}
+update :: (MonadChangeset s w m, RightTorsor w s) => s -> m ()
+update s = diff s >>= change

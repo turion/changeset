@@ -47,6 +47,7 @@ common opts
     DeriveGeneric
     DeriveTraversable
     DerivingStrategies
+    DerivingVia
     FlexibleContexts
     FlexibleInstances
     FunctionalDependencies
@@ -113,6 +114,7 @@ test-suite changeset-test
     base,
     changeset,
     containers >=0.6 && <0.8,
+    falsify ^>=0.2.0,
     monoid-extras,
     tasty >=1.4.2 && <1.6,
     tasty-hunit ^>=0.10.2,
