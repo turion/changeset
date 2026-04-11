@@ -14,37 +14,41 @@ import Data.Monoid.RightAction (RightAction, RightTorsor (differenceRight))
 
 {- | Monads containing changeset state.
 
-This usually implies that the 'Control.Monad.Trans.Changeset.ChangesetT' monad transformer is part of the monad transformer stack of @m.@
+This usually implies that the 'Control.Monad.Trans.Changeset.ChangesetT' monad transformer is part of the monad transformer stack of @m@.
 See its documentation for details.
 
 Two laws for these methods boil down to the requirement that 'change' and 'current' are special cases of 'changeset':
 
 @
-  change w = changeset $ const ((), w)
-  current = changeset (, mempty)
+  'change' w = 'changeset' $ 'const' ((), w)
+  'current' = 'changeset' (, 'mempty')
 @
 
 The central law ensures that future states are affected by the past changes through right action:
 
 @
-forall MonadChangeset s w m
-       f :: s -> (a, w)
-       g :: a -> s -> (b, w) .
-changeset f >>= (changeset . g)
+f :: s -> (a, w)
+g :: a -> s -> (b, w)
+
+'changeset' f >>= ('changeset' . g)
   =
-changeset $ \s -> let (a, w) = f s in g a $ s `actRight` w
+'changeset' $ \s -> let (a, w) = f s in g a $ s \`'Data.Monoid.RightAction.actRight'\` w
 @
 
 This law has several easier to grasp corollaries:
+
 @
-change w >> current = do
-  s <- current
-  change w
-  return $ s 'actRight' w
+--  Applying a change and then observing the state is the same as observing the state, updating it, and applying the change.
+'change' w >> 'current' = do
+  s <- 'current'
+  'change' w
+  'return' $ s \`'Data.Monoid.RightAction.actRight'\` w
 
-change w1 >> change w2 = change (w1 <> w2)
+-- Changes are combined through the semigroup product
+'change' w1 >> 'change' w2 = 'change' (w1 <> w2)
 
-current s1 >> current s2 = current s2
+-- current has no effect other than returning the current state
+'current' >> 'current' = 'current'
 @
 -}
 class (Monad m, Monoid w, RightAction w s) => MonadChangeset s w m | m -> s, m -> w where
