@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | A type class generalising the API of 'Control.Monad.Trans.Changeset.ChangesetT'.
@@ -47,7 +48,7 @@ change w1 >> change w2 = change (w1 <> w2)
 current s1 >> current s2 = current s2
 @
 -}
-class (Monad m, Monoid w, RightAction w s) => MonadChangeset s w m | m -> s, m -> w where
+class (Monad m, Monoid w, RightAction w s) => MonadChangeset s w m where
   -- | Apply a changeset to the state.
   changeset ::
     -- | Receives the current state and has to output a value and a change.
@@ -61,26 +62,26 @@ class (Monad m, Monoid w, RightAction w s) => MonadChangeset s w m | m -> s, m -
   This is a special case of 'changeset' where the current state is disregarded.
   -}
   change :: w -> m ()
-  change w = changeset $ const ((), w)
+  change w = changeset @s $ const ((), w)
 
   {- | Observe the current state.
 
   This is a special case of 'changeset' where the state is not changed.
   -}
   current :: m s
-  current = changeset (,mempty)
+  current = changeset @s (, mempty @w)
 
 instance {-# OVERLAPPABLE #-} (Monad m, Monad (t m), MonadTrans t, MFunctor t, MonadChangeset s w m) => MonadChangeset s w (t m) where
   changeset = lift . changeset
-  change = lift . change
-  current = lift current
+  change = lift . change @s
+  current = lift $ current @s @w
 
 {- | Calculate the difference from the current state to the explicitly given state, and return it.
 
 Also see 'update'.
 -}
-diff :: (RightTorsor w s, MonadChangeset s w m) => s -> m w
-diff s = (`differenceRight` s) <$> current
+diff :: forall s w m. (MonadChangeset s w m, RightTorsor w s) => s -> m w
+diff s = (`differenceRight` s) <$> current @s @w
 
 {- | Update to a specific state.
 
@@ -88,5 +89,5 @@ This is only possible if the change is also a /torsor/, that is, there is a way 
 
 With a lawful @'RightTorsor' w s@ instance, it can be expected that after applying @'update' s@, the state is @s@.
 -}
-update :: (MonadChangeset s w m, RightTorsor w s) => s -> m ()
-update s = diff s >>= change
+update :: forall s w m. (MonadChangeset s w m, RightTorsor w s) => s -> m ()
+update s = diff s >>= change @s @w
