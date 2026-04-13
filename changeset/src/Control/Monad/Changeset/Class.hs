@@ -88,6 +88,7 @@ diff s = (`differenceRight` s) <$> current
 
 {- | Update to a specific state.
 
+Uses 'diff' to calculate the missing change to the intended state.
 This is only possible if the change is also a /torsor/, that is, there is a way to calculate a change as a difference between states.
 
 With a lawful @'RightTorsor' w s@ instance, it can be expected that after applying @'update' s@, the state is @s@.
