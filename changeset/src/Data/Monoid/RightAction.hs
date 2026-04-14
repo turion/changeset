@@ -37,7 +37,7 @@ infixl 5 `actRight`
 
 instance RightAction () s
 
-instance RightAction m ()
+instance {-# OVERLAPPABLE #-} RightAction m ()
 
 instance RightAction Void s
 
@@ -130,8 +130,11 @@ the round-trip produces 'mempty' instead of the original @w@.
 instance (Eq s) => RightTorsor (Last s) s where
   differenceRight sOrig sActed = Last $ if sOrig == sActed then Nothing else Just sActed
 
--- | Calculate the diff per position of the container.
-instance (Semigroup w, RightTorsor w s, Zip f) => RightTorsor (f w) (f s) where
+{- | Calculate the diff per position of the container.
+
+This instance is marked as @{\-# OVERLAPPABLE #-\}@ so it is possible to define more specific instances for particular container types.
+-}
+instance {-# OVERLAPPABLE #-} (Semigroup w, RightTorsor w s, Zip f) => RightTorsor (f w) (f s) where
   differenceRight = zipWith differenceRight
 
 instance {-# OVERLAPPING #-} (Num a) => RightTorsor (Sum a) (Sum a) where
