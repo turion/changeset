@@ -37,8 +37,6 @@ infixl 5 `actRight`
 
 instance RightAction () s
 
-instance {-# OVERLAPPABLE #-} RightAction m ()
-
 instance RightAction Void s
 
 instance (RightAction w1 s1, RightAction w2 s2) => RightAction (w1, w2) (s1, s2) where

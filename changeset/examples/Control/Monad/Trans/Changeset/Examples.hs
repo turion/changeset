@@ -10,9 +10,6 @@ import Data.Functor.Identity (Identity)
 import Data.Monoid (Dual (..), Endo (..), Last)
 import Data.Tuple (swap)
 
--- monoid-extras
-import Data.Monoid.Action
-
 -- mtl
 import Control.Monad.Reader (MonadReader (..))
 import Control.Monad.State (MonadState (..), modify, runState)
@@ -24,6 +21,7 @@ import Witherable (mapMaybe)
 -- changeset
 import Control.Monad.Changeset.Class (MonadChangeset (..))
 import Control.Monad.Trans.Changeset
+import Data.Monoid.RightAction (RightAction (..))
 
 -- tasty
 import Test.Tasty (TestTree, testGroup)
@@ -45,8 +43,8 @@ instance {-# OVERLAPPING #-} (Monad m) => MonadReader r (TrivialChangeReaderT r 
 -- | 'WriterT' is a special case of 'ChangesetT' when the current state is trivial.
 type TrivialActionWriterT w = ChangesetT () w
 
-instance Action w () where
-  act _ _ = ()
+instance RightAction w () where
+  actRight _ _ = ()
 
 instance {-# OVERLAPPING #-} (Monoid w, Monad m) => MonadWriter w (TrivialActionWriterT w m) where
   writer = ChangesetT . pure . pure . swap
@@ -61,7 +59,7 @@ and only the last write matters.
 type LastWriteT s = ChangesetT s (Last s)
 
 instance {-# OVERLAPPING #-} (Monad m) => MonadState s (LastWriteT s m) where
-  state f = ChangesetT $ \s -> return $ first pure $ swap $ f s
+  state f = ChangesetT $ \s -> pure $ first pure $ swap $ f s
 
 -- * Another state monad
 
@@ -72,7 +70,7 @@ There is a further, not so much studied state monad by choosing any state type @
 type EndoStateT s = ChangesetT s (Dual (Endo s))
 
 instance {-# OVERLAPPING #-} (Monad m) => MonadState s (EndoStateT s m) where
-  state f = ChangesetT $ \s -> return (Dual $ Endo $ snd <$> f, fst $ f s)
+  state f = ChangesetT $ \s -> pure (Dual $ Endo $ snd <$> f, fst $ f s)
 
 type M = Changes (ListChange Int)
 
@@ -91,7 +89,7 @@ stateExample = do
   n <- get
   put 2
   put 3
-  return n
+  pure n
 
 tests :: TestTree
 tests =
