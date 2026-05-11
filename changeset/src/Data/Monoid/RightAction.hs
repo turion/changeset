@@ -37,8 +37,6 @@ infixl 5 `actRight`
 
 instance RightAction () s
 
-instance {-# OVERLAPPABLE #-} RightAction m ()
-
 instance RightAction Void s
 
 instance (RightAction w1 s1, RightAction w2 s2) => RightAction (w1, w2) (s1, s2) where
@@ -137,8 +135,8 @@ This instance is marked as @{\-# OVERLAPPABLE #-\}@ so it is possible to define 
 instance {-# OVERLAPPABLE #-} (Semigroup w, RightTorsor w s, Zip f) => RightTorsor (f w) (f s) where
   differenceRight = zipWith differenceRight
 
-instance {-# OVERLAPPING #-} (Num a) => RightTorsor (Sum a) (Sum a) where
+instance (Num a) => RightTorsor (Sum a) (Sum a) where
   differenceRight = flip (-)
 
-instance {-# OVERLAPPING #-} (Fractional a) => RightTorsor (Product a) (Product a) where
+instance (Fractional a) => RightTorsor (Product a) (Product a) where
   differenceRight (Product aOld) (Product aNew) = Product $ aNew / aOld
