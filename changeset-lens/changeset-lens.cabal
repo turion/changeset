@@ -65,7 +65,7 @@ library
 
   build-depends:
     base >=4.16 && <4.23,
-    changeset ==0.2,
+    changeset ==0.2.1,
     containers >=0.6 && <0.8,
     indexed-traversable ^>=0.1.1,
     lens >=4.19.2 && <5.4,

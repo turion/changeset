@@ -56,7 +56,7 @@ library
 
   build-depends:
     base >=4.16 && <4.23,
-    changeset ==0.2,
+    changeset ==0.2.1,
     fused-effects ^>=1.1.2.3,
 
   hs-source-dirs: src
