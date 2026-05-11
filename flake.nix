@@ -26,6 +26,7 @@
         changeset-containers = ./changeset-containers;
         changeset-lens = ./changeset-lens;
         changeset-reflex = ./changeset-reflex;
+        changeset-time = ./changeset-time;
       };
 
       # Always keep in sync with the tested-with section in the cabal file
