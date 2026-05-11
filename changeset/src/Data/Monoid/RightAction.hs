@@ -135,8 +135,8 @@ This instance is marked as @{\-# OVERLAPPABLE #-\}@ so it is possible to define 
 instance {-# OVERLAPPABLE #-} (Semigroup w, RightTorsor w s, Zip f) => RightTorsor (f w) (f s) where
   differenceRight = zipWith differenceRight
 
-instance {-# OVERLAPPING #-} (Num a) => RightTorsor (Sum a) (Sum a) where
+instance (Num a) => RightTorsor (Sum a) (Sum a) where
   differenceRight = flip (-)
 
-instance {-# OVERLAPPING #-} (Fractional a) => RightTorsor (Product a) (Product a) where
+instance (Fractional a) => RightTorsor (Product a) (Product a) where
   differenceRight (Product aOld) (Product aNew) = Product $ aNew / aOld
