@@ -62,8 +62,8 @@ Example:
 someLens |>~ Increment
 @
 -}
-(|>~) :: (MonadChangeset s (SetterChangeset s a w) m) => Setter' s a -> w -> m ()
-setter |>~ w = change $ setterChangeset setter w
+(|>~) :: forall s a w m. (MonadChangeset s (SetterChangeset s a w) m) => Setter' s a -> w -> m ()
+setter |>~ w = change @s $ setterChangeset setter w
 
 {- | Set a value through a setter.
 
