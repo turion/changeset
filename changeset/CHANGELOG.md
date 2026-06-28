@@ -1,5 +1,13 @@
 # Revision history for changeset
 
+## 0.2.2
+
+* Add record field for SetTo
+
+## 0.2.1
+
+* Fix instance overlapping in some cases
+
 ## 0.2
 
 * Support GHC 9.12
