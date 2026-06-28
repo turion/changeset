@@ -72,7 +72,7 @@ test-suite changeset-fused-effects-test
     base,
     changeset,
     changeset-fused-effects,
-    falsify ^>=0.2,
+    falsify ^>=0.3.0,
     fused-effects,
     monoid-extras,
     tasty ^>=1.4.2,
