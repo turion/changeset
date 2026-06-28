@@ -51,6 +51,7 @@
             composeManyExtensions [
               (hfinal: hprev: {
                 reflex = dontCheck (doJailbreak hprev.reflex);
+                falsify = hprev.falsify_0_3_0;
               })
             ];
 
