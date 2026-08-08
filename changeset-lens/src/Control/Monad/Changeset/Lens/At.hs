@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Control.Monad.Changeset.Lens.At where
@@ -105,8 +106,8 @@ i <>\@ 'setJust' a
 i <>\@ 'setNothing'
 @
 -}
-(<>@) :: (MonadChangeset s (AtChangeset s w) m) => Index s -> w -> m ()
-index <>@ w = change $ atChangeset index w
+(<>@) :: forall s w m. (MonadChangeset s (AtChangeset s w) m) => Index s -> w -> m ()
+index <>@ w = change @s $ atChangeset @s index w
 
 {- | Set a value at a given index.
 
@@ -119,8 +120,8 @@ Example:
 i .@ a
 @
 -}
-(.@) :: (MonadChangeset s (AtChangeset s (MaybeChange (IxValue s))) m) => Index s -> IxValue s -> m ()
-index .@ w = index <>@ setJust w
+(.@) :: forall s m. (MonadChangeset s (AtChangeset s (MaybeChange (IxValue s))) m) => Index s -> IxValue s -> m ()
+index .@ w = (<>@) @s index (setJust w)
 
 {- | Lift an 'IxedChangeset' to an 'AtChangeset'.
 

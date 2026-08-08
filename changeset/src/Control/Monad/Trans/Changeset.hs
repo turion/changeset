@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {- | A general state monad transformer with separate types for the state and the possible changes, updates, commits, or diffs.
@@ -406,8 +407,8 @@ singleChange :: w -> Changes w
 singleChange = Changes . pure
 
 -- | Apply a single change.
-changeSingle :: (MonadChangeset s (Changes w) m) => w -> m ()
-changeSingle = change . singleChange
+changeSingle :: forall s w m. (MonadChangeset s (Changes w) m) => w -> m ()
+changeSingle = change @s @(Changes w) . singleChange
 
 -- | Apply all changes sequentially
 instance (RightAction w s) => RightAction (Changes w) s where

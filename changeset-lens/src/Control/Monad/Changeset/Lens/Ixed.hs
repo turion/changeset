@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Control.Monad.Changeset.Lens.Ixed where
@@ -93,8 +94,8 @@ Example:
 i |>! Increment
 @
 -}
-(|>!) :: (MonadChangeset s (IxedChangeset s w) m) => Index s -> w -> m ()
-index |>! w = change $ ixedChangeset index w
+(|>!) :: forall s w m. (MonadChangeset s (IxedChangeset s w) m) => Index s -> w -> m ()
+index |>! w = change @s $ ixedChangeset @s index w
 
 {- | Set a value at a given index.
 
@@ -107,5 +108,5 @@ Example:
 i .! a
 @
 -}
-(.!) :: (MonadChangeset s (IxedChangeset s (First (IxValue s))) m) => Index s -> IxValue s -> m ()
-index .! w = index |>! First (Just w)
+(.!) :: forall s m. (MonadChangeset s (IxedChangeset s (First (IxValue s))) m) => Index s -> IxValue s -> m ()
+index .! w = (|>!) @s index (First (Just w))
