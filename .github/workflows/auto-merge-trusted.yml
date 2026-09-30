@@ -1,0 +1,63 @@
+name: Auto-merge trusted maintenance PRs
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pull-request-number:
+        description: Pull request number to check
+        required: true
+        type: number
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check whether the pull request is trusted
+        id: eligibility
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let pullRequest;
+            if (context.eventName === 'pull_request') {
+              pullRequest = context.payload.pull_request;
+            } else {
+              const pullNumber = Number(core.getInput('pull-request-number'));
+              if (!Number.isInteger(pullNumber) || pullNumber < 1) {
+                throw new Error('A valid pull request number is required.');
+              }
+              const { data } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pullNumber,
+              });
+              pullRequest = data;
+            }
+
+            // Only trusted bots and maintenance branches qualify. Require branch protection
+            // to enforce the CI success check, and accept same-repository branches only (no forks).
+            const sameRepository =
+              pullRequest.head.repo?.full_name === `${context.repo.owner}/${context.repo.repo}`;
+            const trustedAuthor = pullRequest.user?.login === 'dependabot[bot]';
+            const trustedBranch =
+              pullRequest.head.ref.startsWith('update_flake_lock_action') ||
+              pullRequest.head.ref.startsWith('update-flake-lock') ||
+              pullRequest.head.ref.startsWith('update-flake-lock-action') ||
+              pullRequest.head.ref.startsWith('dependabot/');
+            const safe = sameRepository && (trustedAuthor || trustedBranch);
+
+            core.setOutput('safe', String(safe));
+            core.setOutput('pull-number', String(pullRequest.number));
+            core.info(`Pull request ${pullRequest.number} safe to auto-merge: ${safe}`);
+
+      - name: Enable auto-merge
+        if: steps.eligibility.outputs.safe == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.eligibility.outputs.pull-number }}
+        run: gh pr merge "$PR_NUMBER" --auto --squash --delete-branch
