@@ -1,0 +1,18 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "branchPrefix": "renovate/",
+  "schedule": ["before 5am on monday"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      // Renovate has no native Cabal parser; this best-effort regex may need manual tuning.
+      "managerFilePatterns": ["/\\.cabal$/"],
+      "matchStrings": [
+        "(?:^|\\r?\\n)[ \\t]*(?<depName>[A-Za-z0-9][A-Za-z0-9-]*)[ \\t]+[^,\\r\\n]*?(?:<=|<)[ \\t]*(?<currentValue>\\d+(?:\\.\\d+)+)"
+      ],
+      "datasourceTemplate": "hackage",
+      "versioningTemplate": "pvp"
+    }
+  ]
+}
