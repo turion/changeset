@@ -39,17 +39,13 @@ jobs:
               pullRequest = data;
             }
 
-            // Only trusted bots and maintenance branches qualify. Require branch protection
-            // to enforce the CI success check, and accept same-repository branches only (no forks).
+            // Trust only the Dependabot bot identity, not a branch name that a contributor
+            // could choose. Require branch protection to enforce the CI success check, and
+            // accept same-repository branches only (no forks).
             const sameRepository =
               pullRequest.head.repo?.full_name === `${context.repo.owner}/${context.repo.repo}`;
             const trustedAuthor = pullRequest.user?.login === 'dependabot[bot]';
-            const trustedBranch =
-              pullRequest.head.ref.startsWith('update_flake_lock_action') ||
-              pullRequest.head.ref.startsWith('update-flake-lock') ||
-              pullRequest.head.ref.startsWith('update-flake-lock-action') ||
-              pullRequest.head.ref.startsWith('dependabot/');
-            const safe = sameRepository && (trustedAuthor || trustedBranch);
+            const safe = sameRepository && trustedAuthor;
 
             core.setOutput('safe', String(safe));
             core.setOutput('pull-number', String(pullRequest.number));
